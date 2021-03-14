@@ -56,10 +56,6 @@ using std::string;
 using std::to_string;
 using std::vector;
 
-typedef pid_t process_t;
-typedef std::string wid_t;
-typedef unsigned long long window_t;
-
 namespace dialog_module {
 
 namespace {
@@ -69,7 +65,6 @@ int const dm_zenity  =  0;
 int const dm_kdialog =  1;
 int dm_dialogengine  = -1;
 
-process_t proc = 0;
 void *owner = nullptr;
 string caption;
 string current_icon;
@@ -221,74 +216,38 @@ void SetErrorHandlers() {
   XSetIOErrorHandler(XIOErrorHandlerImpl);
 }
 
-window_t window_from_wid(wid_t wid) {
-  return stoull(wid, nullptr, 10);
-}
-
-wid_t wid_from_window(window_t window) {
-  return to_string(reinterpret_cast<unsigned long long>(window));
-}
-
-wid_t wid_from_top() {
+unsigned long get_wid_or_pid(Display *display, Window window, bool wid) {
   SetErrorHandlers();
   unsigned char *prop;
   unsigned long property;
   Atom actual_type, filter_atom;
   int actual_format, status;
   unsigned long nitems, bytes_after;
-  wid_t wid; Window window;
-  Display *display = XOpenDisplay(nullptr);
+  filter_atom = XInternAtom(display, wid ? "_NET_ACTIVE_WINDOW" : "_NET_WM_PID", true);
+  status = XGetWindowProperty(display, window, filter_atom, 0, 1000, false,
+  AnyPropertyType, &actual_type, &actual_format, &nitems, &bytes_after, &prop);
+  if (status == Success && prop != nullptr) {
+    property = prop[0] + (prop[1] << 8) + (prop[2] << 16) + (prop[3] << 24);
+    XFree(prop);
+  }
+  return property;
+}
+
+Window wid_from_top(Display *display) {
+  SetErrorHandlers();
   int screen = XDefaultScreen(display);
-  window = RootWindow(display, screen);
-  filter_atom = XInternAtom(display, "_NET_ACTIVE_WINDOW", true);
-  status = XGetWindowProperty(display, window, filter_atom, 0, 1000, false,
-  AnyPropertyType, &actual_type, &actual_format, &nitems, &bytes_after, &prop);
-  if (status == Success && prop != nullptr) {
-    property = prop[0] + (prop[1] << 8) + (prop[2] << 16) + (prop[3] << 24);
-    XFree(prop);
-  }
-  wid = wid_from_window(property);
-  XCloseDisplay(display);
-  return wid;
+  Window window = RootWindow(display, screen);
+  return (Window)get_wid_or_pid(display, window, true);
 }
 
-process_t pid_from_wid(wid_t wid) {
-  SetErrorHandlers();
-  unsigned char *prop;
-  unsigned long property;
-  Atom actual_type, filter_atom;
-  int actual_format, status;
-  unsigned long nitems, bytes_after;
-  process_t pid; Window window;
-  window = window_from_wid(wid);
-  if (!window) return pid;
-  Display *display = XOpenDisplay(nullptr);
-  filter_atom = XInternAtom(display, "_NET_WM_PID", true);
-  status = XGetWindowProperty(display, window, filter_atom, 0, 1000, false,
-  AnyPropertyType, &actual_type, &actual_format, &nitems, &bytes_after, &prop);
-  if (status == Success && prop != nullptr) {
-    property = prop[0] + (prop[1] << 8) + (prop[2] << 16) + (prop[3] << 24);
-    XFree(prop);
-  }
-  pid = property;
-  XCloseDisplay(display);
-  return pid;
+pid_t pid_from_wid(Display *display, Window window) {
+  return (pid_t)get_wid_or_pid(display, window, false);
 }
 
-void wid_set_pwid(wid_t wid, wid_t pwid) {
-  SetErrorHandlers();
-  if (pwid == "-1") return;
-  Display *display = XOpenDisplay(nullptr);
-  unsigned long window = window_from_wid(wid);
-  unsigned long parent = stoul(pwid, nullptr, 10);
-  XSetTransientForHint(display, window, parent);
-  XCloseDisplay(display);
-}
-
-process_t process_execute(const char *command, int *infp, int *outfp) {
+pid_t process_execute(const char *command, int *infp, int *outfp) {
   int p_stdin[2];
   int p_stdout[2];
-  process_t pid;
+  pid_t pid;
   if (pipe(p_stdin) == -1)
     return -1;
   if (pipe(p_stdout) == -1) {
@@ -330,28 +289,28 @@ process_t process_execute(const char *command, int *infp, int *outfp) {
   return pid;
 }
 
-void modify_dialog(process_t pid) {
+void modify_dialog(Display *display, pid_t pid) {
   SetErrorHandlers();
-  Window window, parent = owner ? (Window)owner :
-    (Window)window_from_wid(wid_from_top());
-  wid_t wid = wid_from_top();
-  while (pid_from_wid(wid) != pid) {
-    wid = wid_from_top();
+  Window wid = wid_from_top(display),
+    pwid = owner ? (Window)owner : wid;
+  while (pid_from_wid(display, wid) != pid) {
+    wid = wid_from_top(display);
+    if (owner != (void *)-1)
+      XSetTransientForHint(display, wid, pwid);
+    if (file_exists(current_icon) && filename_ext(current_icon) == ".png")
+      XSetIcon(display, wid, current_icon.c_str());
   }
-  wid_set_pwid(wid, wid_from_window((unsigned long)parent));
-  window = (Window)window_from_wid(wid);
-  Display *display = XOpenDisplay(nullptr);
-  if (file_exists(current_icon) && filename_ext(current_icon) == ".png")
-    XSetIcon(display, window, current_icon.c_str());
-  XCloseDisplay(display);
 }
 
-string shellscript_evaluate(string command) {
+string create_shell_dialog(string command) {
   string output; char buffer[BUFSIZ];
   int outfp = 0, infp = 0; ssize_t nRead = 0;
   pid_t pid = process_execute(command.c_str(), &infp, &outfp);
   pid_t fpid = 0; if ((fpid = fork()) == 0) {
-    modify_dialog(pid);
+    SetErrorHandlers();
+    Display *display = XOpenDisplay(nullptr);
+    modify_dialog(display, pid);
+    XCloseDisplay(display);
     exit(0);
   }
   while ((nRead = read(outfp, buffer, BUFSIZ)) > 0) {
@@ -457,9 +416,6 @@ int show_message_helperfunc(char *str) {
   caption = (str_title == "Information") ? "Information" : caption;
   caption = (str_title == "Question") ? "Question" : caption;
 
-  wid_t window = owner ? ((dm_dialogengine == dm_zenity) ? "echo " : "") +
-    wid_from_window((unsigned long)owner) : wid_from_top();
-
   string str_cancel;
   string str_echo = "echo 1";
 
@@ -489,7 +445,7 @@ int show_message_helperfunc(char *str) {
     str_cancel + string("--title \"") + str_title + string("\";") + str_echo;
   }
 
-  string str_result = shellscript_evaluate(str_command);
+  string str_result = create_shell_dialog(str_command);
   caption = caption_previous;
   double result = strtod(str_result.c_str(), nullptr);
   return (int)result;
@@ -505,9 +461,6 @@ int show_question_helperfunc(char *str) {
   string caption_previous = caption;
   caption = (str_title == "Question") ? "Question" : caption;
   string str_cancel = "";
-
-  wid_t window = owner ? ((dm_dialogengine == dm_zenity) ? "echo " : "") +
-    wid_from_window((unsigned long)owner) : wid_from_top();
 
   if (dm_dialogengine == dm_zenity) {
     if (question_cancel)
@@ -528,7 +481,7 @@ int show_question_helperfunc(char *str) {
     string("x=$? ;if [ $x = 0 ] ;then echo 1;elif [ $x = 1 ] ;then echo 0;elif [ $x = 2 ] ;then echo -1;fi");
   }
 
-  string str_result = shellscript_evaluate(str_command);
+  string str_result = create_shell_dialog(str_command);
   caption = caption_previous;
   double result = strtod(str_result.c_str(), nullptr);
   return (int)result;
@@ -566,9 +519,6 @@ int show_attempt(char *str) {
   string caption_previous = caption;
   caption = (str_title == "Error") ? "Error" : caption;
 
-  wid_t window = owner ? ((dm_dialogengine == dm_zenity) ? "echo " : "") +
-    wid_from_window((unsigned long)owner) : wid_from_top();
-
   if (dm_dialogengine == dm_zenity) {
     str_command = string("ans=$(zenity ") +
     string("--question --ok-label=\"") + add_escaping(btn_array[BUTTON_RETRY], true, "") + string("\" --cancel-label=\"") + add_escaping(btn_array[BUTTON_CANCEL], true, "") + string("\" ") +  string("--title=\"") +
@@ -582,7 +532,7 @@ int show_attempt(char *str) {
     str_title + string("\" ") + str_icon + string(";") + string("x=$? ;if [ $x = 0 ] ;then echo 0;else echo -1;fi");
   }
 
-  string str_result = shellscript_evaluate(str_command);
+  string str_result = create_shell_dialog(str_command);
   caption = caption_previous;
   double result = strtod(str_result.c_str(), nullptr);
   return (int)result;
@@ -598,9 +548,6 @@ int show_error(char *str, bool abort) {
   string caption_previous = caption;
   caption = (str_title == "Error") ? "Error" : caption;
   string str_echo;
-
-  wid_t window = owner ? ((dm_dialogengine == dm_zenity) ? "echo " : "") +
-    wid_from_window((unsigned long)owner) : wid_from_top();
 
   if (dm_dialogengine == dm_zenity) {
     str_echo = abort ? "echo 1" : "if [ $? = 0 ] ;then echo 1;else echo -1;fi";
@@ -633,7 +580,7 @@ int show_error(char *str, bool abort) {
     }
   }
 
-  string str_result = shellscript_evaluate(str_command);
+  string str_result = create_shell_dialog(str_command);
   caption = caption_previous;
   double result = strtod(str_result.c_str(), nullptr);
   if (result == 1) exit(0);
@@ -650,9 +597,6 @@ char *get_string(char *str, char *def) {
   if (current_icon == "") current_icon = filename_absolute("assets/icon.png");
   string str_icon = file_exists(current_icon) ? str_iconflag + add_escaping(current_icon, false, "") + string("\"") : "";
 
-  wid_t window = owner ? ((dm_dialogengine == dm_zenity) ? "echo " : "") +
-    wid_from_window((unsigned long)owner) : wid_from_top();
-
   if (dm_dialogengine == dm_zenity) {
     str_command = string("ans=$(zenity ") +
     string("--entry --title=\"") + str_title + string("\"") + str_icon + string(" --text=\"") +
@@ -667,7 +611,7 @@ char *get_string(char *str, char *def) {
   }
 
   static string result;
-  result = shellscript_evaluate(str_command);
+  result = create_shell_dialog(str_command);
   caption = caption_previous;
   return (char *)result.c_str();
 }
@@ -681,9 +625,6 @@ char *get_password(char *str, char *def) {
   string str_icon = file_exists(current_icon) ? str_iconflag + add_escaping(current_icon, false, "") + string("\"") : "";
   string caption_previous = caption;
   caption = (str_title == "Input Query") ? "Input Query" : caption;
-
-  wid_t window = owner ? ((dm_dialogengine == dm_zenity) ? "echo " : "") +
-    wid_from_window((unsigned long)owner) : wid_from_top();
 
   if (dm_dialogengine == dm_zenity) {
     str_command = string("ans=$(zenity ") +
@@ -699,7 +640,7 @@ char *get_password(char *str, char *def) {
   }
 
   static string result;
-  result = shellscript_evaluate(str_command);
+  result = create_shell_dialog(str_command);
   caption = caption_previous;
   return (char *)result.c_str();
 }
@@ -752,9 +693,6 @@ char *get_open_filename_ext(char *filter, char *fname, char *dir, char *title) {
   if (current_icon == "") current_icon = filename_absolute("assets/icon.png");
   string str_icon = file_exists(current_icon) ? str_iconflag + add_escaping(current_icon, false, "") + string("\"") : "";
 
-  wid_t window = owner ? ((dm_dialogengine == dm_zenity) ? "echo " : "") +
-    wid_from_window((unsigned long)owner) : wid_from_top();
-
   string str_path = fname;
   if (str_dir[0] != '\0') str_path = str_dir + string("/") + str_fname;
   str_fname = (char *)str_path.c_str();
@@ -774,7 +712,7 @@ char *get_open_filename_ext(char *filter, char *fname, char *dir, char *title) {
   }
 
   static string result;
-  result = shellscript_evaluate(str_command);
+  result = create_shell_dialog(str_command);
   caption = caption_previous;
 
   if (file_exists(result))
@@ -799,9 +737,6 @@ char *get_open_filenames_ext(char *filter, char *fname, char *dir, char *title) 
   if (current_icon == "") current_icon = filename_absolute("assets/icon.png");
   string str_icon = file_exists(current_icon) ? str_iconflag + add_escaping(current_icon, false, "") + string("\"") : "";
 
-  wid_t window = owner ? ((dm_dialogengine == dm_zenity) ? "echo " : "") +
-    wid_from_window((unsigned long)owner) : wid_from_top();
-
   string str_path = fname;
   if (str_dir[0] != '\0') str_path = str_dir + string("/") + str_fname;
   str_fname = (char *)str_path.c_str();
@@ -821,7 +756,7 @@ char *get_open_filenames_ext(char *filter, char *fname, char *dir, char *title) 
   }
 
   static string result;
-  result = shellscript_evaluate(str_command);
+  result = create_shell_dialog(str_command);
   caption = caption_previous;
   std::vector<string> stringVec = string_split(result, '\n');
 
@@ -853,9 +788,6 @@ char *get_save_filename_ext(char *filter, char *fname, char *dir, char *title) {
   if (current_icon == "") current_icon = filename_absolute("assets/icon.png");
   string str_icon = file_exists(current_icon) ? str_iconflag + add_escaping(current_icon, false, "") + string("\"") : "";
 
-  wid_t window = owner ? ((dm_dialogengine == dm_zenity) ? "echo " : "") +
-    wid_from_window((unsigned long)owner) : wid_from_top();
-
   string str_path = fname;
   if (str_dir[0] != '\0') str_path = str_dir + string("/") + str_fname;
   str_fname = (char *)str_path.c_str();
@@ -875,7 +807,7 @@ char *get_save_filename_ext(char *filter, char *fname, char *dir, char *title) {
   }
 
   static string result;
-  result = shellscript_evaluate(str_command);
+  result = create_shell_dialog(str_command);
   caption = caption_previous;
   return (char *)result.c_str();
 }
@@ -896,9 +828,6 @@ char *get_directory_alt(char *capt, char *root) {
   string str_icon = file_exists(current_icon) ? str_iconflag + add_escaping(current_icon, false, "") + string("\"") : "";
   string str_end = ");if [ $ans = / ] ;then echo $ans;elif [ $? = 1 ] ;then echo $ans/;else echo $ans;fi";
 
-  wid_t window = owner ? ((dm_dialogengine == dm_zenity) ? "echo " : "") +
-    wid_from_window((unsigned long)owner) : wid_from_top();
-
   if (dm_dialogengine == dm_zenity) {
     str_command = string("ans=$(zenity ") +
     string("--file-selection --directory --title=\"") + str_title + string("\" --filename=\"") +
@@ -913,7 +842,7 @@ char *get_directory_alt(char *capt, char *root) {
   }
 
   static string result;
-  result = shellscript_evaluate(str_command);
+  result = create_shell_dialog(str_command);
   caption = caption_previous;
   return (char *)result.c_str();
 }
@@ -934,9 +863,6 @@ int get_color_ext(int defcol, char *title) {
   if (current_icon == "") current_icon = filename_absolute("assets/icon.png");
   string str_icon = file_exists(current_icon) ? str_iconflag + add_escaping(current_icon, false, "") + string("\"") : "";
 
-  wid_t window = owner ? ((dm_dialogengine == dm_zenity) ? "echo " : "") +
-    wid_from_window((unsigned long)owner) : wid_from_top();
-
   int red; int green; int blue;
   red = color_get_red(defcol);
   green = color_get_green(defcol);
@@ -949,7 +875,7 @@ int get_color_ext(int defcol, char *title) {
     string("--color-selection --show-palette --title=\"") + str_title + string("\" --color='") +
     str_defcol + string("'") + str_icon + string(");if [ $? = 0 ] ;then echo $ans;else echo -1;fi");
 
-    str_result = shellscript_evaluate(str_command);
+    str_result = create_shell_dialog(str_command);
     caption = caption_previous;
     if (str_result == "-1") return strtod(str_result.c_str(), nullptr);
     str_result = string_replace_all(str_result, "rgba(", "");
@@ -976,7 +902,7 @@ int get_color_ext(int defcol, char *title) {
     string("--getcolor --default '") + str_defcol + string("' --title \"") + str_title +
     string("\"") + str_icon + string(");if [ $? = 0 ] ;then echo $ans;else echo -1;fi");
 
-    str_result = shellscript_evaluate(str_command);
+    str_result = create_shell_dialog(str_command);
     caption = caption_previous;
     if (str_result == "-1") return strtod(str_result.c_str(), nullptr);
     str_result = str_result.substr(1, str_result.length() - 1);
@@ -1003,14 +929,14 @@ void widget_set_caption(char *title) {
 }
 
 char *widget_get_owner() {
-  static wid_t result;
-  result = wid_from_window((unsigned long)owner);
+  static string result;
+  result = to_string((long long)owner);
   return (char *)result.c_str();
 }
 
 void widget_set_owner(char *hwnd) {
-  wid_t str_hwnd = hwnd;
-  owner = (void *)window_from_wid(str_hwnd);
+  string str_hwnd = hwnd;
+  owner = (void *)strtoll(str_hwnd.c_str(), nullptr, 10);
 }
 
 char *widget_get_icon() {
