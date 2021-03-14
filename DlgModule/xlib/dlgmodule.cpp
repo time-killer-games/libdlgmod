@@ -39,27 +39,18 @@
 #include "../Universal/dlgmodule.h"
 #include "lodepng.h"
 
-#include <sys/types.h>
-#if defined (__APPLE__) && defined(__MACH__)
-#include <sys/sysctl.h>
-#include <libproc.h>
-#elif defined(__linux__) && !defined(__ANDROID__)
-#include <proc/readproc.h>
-#elif defined(__FreeBSD__)
-#include <sys/sysctl.h>
-#include <sys/user.h>
-#include <libutil.h>
-#endif
-
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
 
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+
 #include <libgen.h>
 #include <unistd.h>
 #include <signal.h>
+#include <fcntl.h>
 
 using std::string;
 using std::to_string;
@@ -238,65 +229,6 @@ wid_t wid_from_window(window_t window) {
   return to_string(reinterpret_cast<unsigned long long>(window));
 }
 
-process_t ppid_from_pid(process_t pid) {
-  process_t ppid;
-  #if defined (__APPLE__) && defined(__MACH__)
-  proc_bsdinfo proc_info;
-  if (proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &proc_info, sizeof(proc_info)) > 0) {
-    ppid = proc_info.pbi_ppid;
-  }
-  #elif defined(__linux__) && !defined(__ANDROID__)
-  PROCTAB *proc = openproc(PROC_FILLSTATUS | PROC_PID, &pid);
-  if (proc_t *proc_info = readproc(proc, nullptr)) {
-    ppid = proc_info->ppid;
-    freeproc(proc_info);
-  }
-  closeproc(proc);
-  #elif defined(__FreeBSD__)
-  if (kinfo_proc *proc_info = kinfo_getproc(pid)) {
-    ppid = proc_info->ki_ppid;
-    free(proc_info);
-  }
-  #endif
-  return ppid;
-}
-
-string path_from_pid(process_t pid) {
-  if (kill(pid, 0) != 0) return "";
-  #if defined (__APPLE__) && defined(__MACH__)
-  char exe[PROC_PIDPATHINFO_MAXSIZE];
-  if (proc_pidpath(pid, exe, sizeof(exe)) > 0) {
-    return exe;
-  }
-  #elif defined(__linux__) && !defined(__ANDROID__)
-  char exe[PATH_MAX];
-  string symLink = string("/proc/") + to_string(pid) + string("/exe");
-  if (realpath(symLink.c_str(), exe)) {
-    return exe;
-  }
-  #elif defined(__FreeBSD__)
-  int mib[4]; size_t s;
-  mib[0] = CTL_KERN;
-  mib[1] = KERN_PROC;
-  mib[2] = KERN_PROC_PATHNAME;
-  mib[3] = pid;
-  if (sysctl(mib, 4, nullptr, &s, nullptr, 0) == 0) {
-    string str; str.resize(s, '\0');
-    char *exe = str.data();
-    if (sysctl(mib, 4, exe, &s, nullptr, 0) == 0) {
-      return exe;
-    }
-  }
-  #endif
-  return "";
-}
-
-string name_from_pid(process_t pid) {
-  string fname = path_from_pid(pid);
-  size_t fp = fname.find_last_of("/");
-  return fname.substr(fp + 1);
-}
-
 wid_t wid_from_top() {
   SetErrorHandlers();
   unsigned char *prop;
@@ -343,15 +275,6 @@ process_t pid_from_wid(wid_t wid) {
   return pid;
 }
 
-void wid_to_top(wid_t wid) {
-  SetErrorHandlers();
-  unsigned long window = window_from_wid(wid);
-  Display *display = XOpenDisplay(nullptr);
-  XRaiseWindow(display, window);
-  XSetInputFocus(display, window, RevertToPointerRoot, CurrentTime);
-  XCloseDisplay(display);
-}
-
 void wid_set_pwid(wid_t wid, wid_t pwid) {
   SetErrorHandlers();
   if (pwid == "-1") return;
@@ -362,66 +285,90 @@ void wid_set_pwid(wid_t wid, wid_t pwid) {
   XCloseDisplay(display);
 }
 
-bool WaitForChildPidOfPidToExist(process_t pid, process_t ppid) {
-  if (pid == ppid) return true;
-  while (pid != ppid) {
-    if (pid <= 1) break;
-    pid = ppid_from_pid(pid);
+process_t process_execute(const char *command, int *infp, int *outfp) {
+  int p_stdin[2];
+  int p_stdout[2];
+  process_t pid;
+  if (pipe(p_stdin) == -1)
+    return -1;
+  if (pipe(p_stdout) == -1) {
+    close(p_stdin[0]);
+    close(p_stdin[1]);
+    return -1;
   }
-  return (pid != ppid);
-}
-
-process_t modify_dialog(process_t ppid) {
-  process_t pid = 0;
-  if ((pid = fork()) == 0) {
-    SetErrorHandlers();
-    Display *display = XOpenDisplay(nullptr);
-    Window window, parent = owner ? (Window)owner : 
-      (Window)window_from_wid(wid_from_top());
-    string wid = wid_from_top();
-    process_t pid = pid_from_wid(wid);
-    while (WaitForChildPidOfPidToExist(pid, ppid) && 
-      name_from_pid(pid) != "zenity" && name_from_pid(pid) != "kdialog") {
-      wid = wid_from_top();
-      pid = pid_from_wid(wid);
-    }
-    wid_set_pwid(wid, wid_from_window((unsigned long)parent));
-    window = (Window)window_from_wid(wid);
-    Atom atom_name = XInternAtom(display,"_NET_WM_NAME", true);
-    Atom atom_utf_type = XInternAtom(display,"UTF8_STRING", true);
-    char *cstr_caption = (char *)caption.c_str();
-    XChangeProperty(display, window, atom_name, atom_utf_type, 8, 
-      PropModeReplace, (unsigned char *)cstr_caption, strlen(cstr_caption));
-    if (file_exists(current_icon) && filename_ext(current_icon) == ".png")
-      XSetIcon(display, window, current_icon.c_str());
-    XCloseDisplay(display);
+  pid = fork();
+  if (pid < 0) {
+    close(p_stdin[0]);
+    close(p_stdin[1]);
+    close(p_stdout[0]);
+    close(p_stdout[1]);
+    return pid;
+  } else if (pid == 0) {
+    close(p_stdin[1]);
+    dup2(p_stdin[0], 0);
+    close(p_stdout[0]);
+    dup2(p_stdout[1], 1);
+    dup2(open("/dev/null", O_RDONLY), 2);
+    for (int i = 3; i < 4096; i++)
+      close(i);
+    setsid();
+    execl("/bin/sh", "/bin/sh", "-c", command, nullptr);
     exit(0);
+  }
+  close(p_stdin[0]);
+  close(p_stdout[1]);
+  if (infp == nullptr) {
+    close(p_stdin[1]);
+  } else {
+    *infp = p_stdin[1];
+  }
+  if (outfp == nullptr) {
+    close(p_stdout[0]);
+  } else {
+    *outfp = p_stdout[0];
   }
   return pid;
 }
 
+void modify_dialog(process_t pid) {
+  SetErrorHandlers();
+  Window window, parent = owner ? (Window)owner :
+    (Window)window_from_wid(wid_from_top());
+  wid_t wid = wid_from_top();
+  while (pid_from_wid(wid) != pid) {
+    wid = wid_from_top();
+  }
+  wid_set_pwid(wid, wid_from_window((unsigned long)parent));
+  window = (Window)window_from_wid(wid);
+  Display *display = XOpenDisplay(nullptr);
+  if (file_exists(current_icon) && filename_ext(current_icon) == ".png")
+    XSetIcon(display, window, current_icon.c_str());
+  XCloseDisplay(display);
+}
+
 string shellscript_evaluate(string command) {
-  char *buffer = nullptr;
-  size_t buffer_size = 0;
-  string str_buffer;
-  FILE *file = popen(command.c_str(), "r");
-  process_t ppid = getpid();
-  process_t pid = modify_dialog(ppid);
-  while (getline(&buffer, &buffer_size, file) != -1)
-    str_buffer += buffer;
-  free(buffer);
-  pclose(file);
-  kill(pid, SIGTERM);
+  string output; char buffer[BUFSIZ];
+  int outfp = 0, infp = 0; ssize_t nRead = 0;
+  pid_t pid = process_execute(command.c_str(), &infp, &outfp);
+  pid_t fpid = 0; if ((fpid = fork()) == 0) {
+    modify_dialog(pid);
+    exit(0);
+  }
+  while ((nRead = read(outfp, buffer, BUFSIZ)) > 0) {
+    buffer[nRead] = '\0';
+    output.append(buffer, nRead);
+  }
+  kill(fpid, SIGTERM);
   bool died = false;
   for (unsigned i = 0; !died && i < 4; i++) {
-    int status; 
+    int status;
     std::this_thread::sleep_for(std::chrono::milliseconds(250));
-    if (waitpid(pid, &status, WNOHANG) == pid) died = true;
+    if (waitpid(fpid, &status, WNOHANG) == fpid) died = true;
   }
-  if (!died) kill(pid, SIGKILL);
-  if (str_buffer[str_buffer.length() - 1] == '\n')
-    str_buffer.pop_back();
-  return str_buffer;
+  if (!died) kill(fpid, SIGKILL);
+  while (output.back() == '\r' || output.back() == '\n')
+    output.pop_back();
+  return output;
 }
 
 string add_escaping(string str, bool is_caption, string new_caption) {
