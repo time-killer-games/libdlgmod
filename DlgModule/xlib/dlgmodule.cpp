@@ -290,7 +290,7 @@ pid_t process_execute(const char *command, int *infp, int *outfp) {
   return pid;
 }
 
-static void *force_window_of_pid_to_be_transient(void *pid) {
+static void *modify_dialog(void *pid) {
   SetErrorHandlers();
   Display *display = XOpenDisplay(nullptr);
   Window wid = wid_from_top(display),
@@ -299,6 +299,11 @@ static void *force_window_of_pid_to_be_transient(void *pid) {
     wid = wid_from_top(display);
   }
   XSetTransientForHint(display, wid, (Window)pwid);
+  int len = caption.length() + 1; char *buffer = new char[length]();
+  strcpy(buffer, caption.c_str()); XChangeProperty(display, wid,
+  XInternAtom(display, "_NET_WM_NAME", false),
+  XInternAtom(display, "UTF8_STRING", false),
+  8, PropModeReplace, (unsigned char *)buffer, len); delete[] buffer;
   if (file_exists(current_icon) && filename_ext(current_icon) == ".png")
     XSetIcon(display, wid, current_icon.c_str());
   XCloseDisplay(display);
@@ -313,11 +318,11 @@ string create_shell_dialog(string command) {
   pid_t *pids; int size; XProc::ProcIdFromParentProcIdSkipSh(pid, &pids, &size);
   if (pids) {
     pthread_create(&thread, nullptr,
-    force_window_of_pid_to_be_transient, (void *)(std::intptr_t)pids[0]);
+    modify_dialog, (void *)(std::intptr_t)pids[0]);
     free(pids);
   } else {
     pthread_create(&thread, nullptr,
-    force_window_of_pid_to_be_transient, (void *)(std::intptr_t)pid);
+    modify_dialog, (void *)(std::intptr_t)pid);
   }
   while ((nRead = read(outfp, buffer, BUFSIZ)) > 0) {
     buffer[nRead] = '\0';
@@ -353,7 +358,7 @@ string zenity_filter(string input) {
   unsigned index = 0;
   for (string str : stringVec) {
     if (index % 2 == 0)
-      string_output += string(" --file-filter=\"") + 
+      string_output += string(" --file-filter=\"") +
         add_escaping(string_replace_all(str, "*.*", "*"), false, "") + string("|");
     else {
       std::replace(str.begin(), str.end(), ';', ' ');
@@ -404,7 +409,7 @@ int make_color_rgb(unsigned char r, unsigned char g, unsigned char b) {
   return r | (g << 8) | (b << 16);
 }
 
-int show_message_helperfunc(char *str) {  
+int show_message_helperfunc(char *str) {
   change_relative_to_kwin();
   string str_command;
   string str_title = message_cancel ? add_escaping(caption, true, "Question") : add_escaping(caption, true, "Information");
@@ -939,7 +944,7 @@ void widget_set_owner(char *hwnd) {
 }
 
 char *widget_get_icon() {
-  if (current_icon == "") 
+  if (current_icon == "")
     current_icon = filename_absolute("assets/icon.png");
   return (char *)current_icon.c_str();
 }
@@ -960,7 +965,7 @@ char *widget_get_system() {
 
 void widget_set_system(char *sys) {
   string str_sys = sys;
-  
+
   if (str_sys == "X11")
     dm_dialogengine = dm_x11;
 
