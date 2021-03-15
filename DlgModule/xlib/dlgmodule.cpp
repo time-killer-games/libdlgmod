@@ -295,11 +295,11 @@ void modify_dialog(Display *display, pid_t pid) {
     pwid = owner ? (Window)owner : wid;
   while (pid_from_wid(display, wid) != pid) {
     wid = wid_from_top(display);
-    if (owner != (void *)-1)
-      XSetTransientForHint(display, wid, pwid);
-    if (file_exists(current_icon) && filename_ext(current_icon) == ".png")
-      XSetIcon(display, wid, current_icon.c_str());
   }
+  if (owner != (void *)-1)
+    XSetTransientForHint(display, wid, pwid);
+  if (file_exists(current_icon) && filename_ext(current_icon) == ".png")
+    XSetIcon(display, wid, current_icon.c_str());
 }
 
 string create_shell_dialog(string command) {
@@ -354,7 +354,7 @@ string zenity_filter(string input) {
   unsigned index = 0;
   for (string str : stringVec) {
     if (index % 2 == 0)
-      string_output += string(" --file-filter=\"") + 
+      string_output += string(" --file-filter=\"") +
         add_escaping(string_replace_all(str, "*.*", "*"), false, "") + string("|");
     else {
       std::replace(str.begin(), str.end(), ';', ' ');
@@ -405,7 +405,7 @@ int make_color_rgb(unsigned char r, unsigned char g, unsigned char b) {
   return r | (g << 8) | (b << 16);
 }
 
-int show_message_helperfunc(char *str) {  
+int show_message_helperfunc(char *str) {
   change_relative_to_kwin();
   string str_command;
   string str_title = message_cancel ? add_escaping(caption, true, "Question") : add_escaping(caption, true, "Information");
@@ -940,7 +940,7 @@ void widget_set_owner(char *hwnd) {
 }
 
 char *widget_get_icon() {
-  if (current_icon == "") 
+  if (current_icon == "")
     current_icon = filename_absolute("assets/icon.png");
   return (char *)current_icon.c_str();
 }
@@ -961,7 +961,7 @@ char *widget_get_system() {
 
 void widget_set_system(char *sys) {
   string str_sys = sys;
-  
+
   if (str_sys == "X11")
     dm_dialogengine = dm_x11;
 
