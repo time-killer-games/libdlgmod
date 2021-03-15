@@ -299,7 +299,7 @@ static void *modify_dialog(void *pid) {
     wid = wid_from_top(display);
   }
   XSetTransientForHint(display, wid, (Window)pwid);
-  int len = caption.length() + 1; char *buffer = new char[length]();
+  int len = caption.length() + 1; char *buffer = new char[len]();
   strcpy(buffer, caption.c_str()); XChangeProperty(display, wid,
   XInternAtom(display, "_NET_WM_NAME", false),
   XInternAtom(display, "UTF8_STRING", false),
