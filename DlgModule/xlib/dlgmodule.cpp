@@ -38,6 +38,7 @@
 
 #include "../Universal/dlgmodule.h"
 #include "lodepng.h"
+#include "xproc.h"
 
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
@@ -289,42 +290,40 @@ pid_t process_execute(const char *command, int *infp, int *outfp) {
   return pid;
 }
 
-void modify_dialog(Display *display, pid_t pid) {
+static void *force_window_of_pid_to_be_transient(void *pid) {
   SetErrorHandlers();
+  Display *display = XOpenDisplay(nullptr);
   Window wid = wid_from_top(display),
     pwid = owner ? (Window)owner : wid;
-  while (pid_from_wid(display, wid) != pid) {
+  while (pid_from_wid(display, wid) != (pid_t)(std::intptr_t)pid) {
     wid = wid_from_top(display);
   }
-  if (owner != (void *)-1)
-    XSetTransientForHint(display, wid, pwid);
+  XSetTransientForHint(display, wid, (Window)pwid);
   if (file_exists(current_icon) && filename_ext(current_icon) == ".png")
     XSetIcon(display, wid, current_icon.c_str());
+  XCloseDisplay(display);
+  return nullptr;
 }
 
 string create_shell_dialog(string command) {
   string output; char buffer[BUFSIZ];
   int outfp = 0, infp = 0; ssize_t nRead = 0;
   pid_t pid = process_execute(command.c_str(), &infp, &outfp);
-  pid_t fpid = 0; if ((fpid = fork()) == 0) {
-    SetErrorHandlers();
-    Display *display = XOpenDisplay(nullptr);
-    modify_dialog(display, pid);
-    XCloseDisplay(display);
-    exit(0);
+  std::this_thread::sleep_for (std::chrono::milliseconds(100)); pthread_t thread;
+  pid_t *pids; int size; XProc::ProcIdFromParentProcIdSkipSh(pid, &pids, &size);
+  if (pids) {
+    pthread_create(&thread, nullptr,
+    force_window_of_pid_to_be_transient, (void *)(std::intptr_t)pids[0]);
+    free(pids);
+  } else {
+    pthread_create(&thread, nullptr,
+    force_window_of_pid_to_be_transient, (void *)(std::intptr_t)pid);
   }
   while ((nRead = read(outfp, buffer, BUFSIZ)) > 0) {
     buffer[nRead] = '\0';
     output.append(buffer, nRead);
   }
-  kill(fpid, SIGTERM);
-  bool died = false;
-  for (unsigned i = 0; !died && i < 4; i++) {
-    int status;
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
-    if (waitpid(fpid, &status, WNOHANG) == fpid) died = true;
-  }
-  if (!died) kill(fpid, SIGKILL);
+  pthread_cancel(thread);
   while (output.back() == '\r' || output.back() == '\n')
     output.pop_back();
   return output;
@@ -354,7 +353,7 @@ string zenity_filter(string input) {
   unsigned index = 0;
   for (string str : stringVec) {
     if (index % 2 == 0)
-      string_output += string(" --file-filter=\"") +
+      string_output += string(" --file-filter=\"") + 
         add_escaping(string_replace_all(str, "*.*", "*"), false, "") + string("|");
     else {
       std::replace(str.begin(), str.end(), ';', ' ');
@@ -405,7 +404,7 @@ int make_color_rgb(unsigned char r, unsigned char g, unsigned char b) {
   return r | (g << 8) | (b << 16);
 }
 
-int show_message_helperfunc(char *str) {
+int show_message_helperfunc(char *str) {  
   change_relative_to_kwin();
   string str_command;
   string str_title = message_cancel ? add_escaping(caption, true, "Question") : add_escaping(caption, true, "Information");
@@ -940,7 +939,7 @@ void widget_set_owner(char *hwnd) {
 }
 
 char *widget_get_icon() {
-  if (current_icon == "")
+  if (current_icon == "") 
     current_icon = filename_absolute("assets/icon.png");
   return (char *)current_icon.c_str();
 }
@@ -961,7 +960,7 @@ char *widget_get_system() {
 
 void widget_set_system(char *sys) {
   string str_sys = sys;
-
+  
   if (str_sys == "X11")
     dm_dialogengine = dm_x11;
 
