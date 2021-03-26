@@ -4,8 +4,6 @@
 
 A simple, easy-to-use, cross-platform, dialog API, inspired by the GameMaker Language dialog functions. You may dynamically link your projects to the pre-built binaries, or just include the "DlgModule/dlgmodule.h" header.
 
-![](http://i.imgur.com/p0Pwdoah.gif)
-
 ----------------------------------------------------------------------------------------------------------------------------------
 
 # Platforms Supported and Features Included
