@@ -3,6 +3,7 @@
  MIT License
 
  Copyright © 2021 Samuel Venable
+ Copyright © 2021 Nikita Krapivin
  Copyright © 2021 Robert B. Colton
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -319,8 +320,8 @@ static void PpidFromPid(pid_t procId, pid_t *parentProcId) {
 }
 #endif
 
-static void PidFromPpid(pid_t parentProcId, pid_t **procId, int *size) {
-  std::vector<pid_t> vec; int i = 0;
+static std::vector<pid_t> PidFromPpid(pid_t parentProcId) {
+  std::vector<pid_t> vec;
   #if defined(__APPLE__) && defined(__MACH__)
   int cntp = proc_listpids(PROC_ALL_PIDS, 0, nullptr, 0);
   std::vector<pid_t> proc_info(cntp);
@@ -330,14 +331,14 @@ static void PidFromPpid(pid_t parentProcId, pid_t **procId, int *size) {
     if (proc_info[j] == 0) { continue; }
     pid_t ppid; PpidFromPid(proc_info[j], &ppid);
     if (ppid == parentProcId) {
-      vec.push_back(proc_info[j]); i++;
+      vec.push_back(proc_info[j]);
     }
   }
   #elif defined(__linux__) && !defined(__ANDROID__)
   PROCTAB *proc = openproc(PROC_FILLSTAT);
   while (proc_t *proc_info = readproc(proc, nullptr)) {
     if (proc_info->ppid == parentProcId) {
-      vec.push_back(proc_info->tgid); i++;
+      vec.push_back(proc_info->tgid);
     }
     freeproc(proc_info);
   }
@@ -346,36 +347,29 @@ static void PidFromPpid(pid_t parentProcId, pid_t **procId, int *size) {
   int cntp; if (kinfo_proc *proc_info = kinfo_getallproc(&cntp)) {
     for (int j = 0; j < cntp; j++) {
       if (proc_info[j].ki_ppid == parentProcId) {
-        vec.push_back(proc_info[j].ki_pid); i++;
+        vec.push_back(proc_info[j].ki_pid);
       }
     }
     free(proc_info);
   }
   #endif
-  *procId = (pid_t *)malloc(sizeof(pid_t) * vec.size());
-  if (procId) {
-    std::copy(vec.begin(), vec.end(), *procId);
-    *size = i;
-  }
+  return vec;
 }
 
 static pid_t PidFromPpidRecursive(pid_t parentProcId) {
-  pid_t *procId; int size;
-  PidFromPpid(parentProcId, &procId, &size);
-  if (procId) {
-    if (size > 0)
-      parentProcId = PidFromPpidRecursive(procId[0]);
-    free(procId);
+  std::vector<pid_t> pidVec = PidFromPpid(parentProcId);
+  if (pidVec.size()) {
+    parentProcId = PidFromPpidRecursive(pidVec[0]);
   }
   return parentProcId;
 }
 
 static void *modify_shell_dialog(void *pid) {
   SetErrorHandlers();
-  Display *display = XOpenDisplay(nullptr);
-  Window wid = WidFromTop(display);
+  Display *display = XOpenDisplay(nullptr); Window wid;
   pid_t child = PidFromPpidRecursive((pid_t)(std::intptr_t)pid);
   while (true) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
     wid = WidFromTop(display);
     if (PidFromWid(display, wid) == child) {
       break;
