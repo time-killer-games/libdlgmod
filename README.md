@@ -8,7 +8,7 @@ A simple, easy-to-use, cross-platform, dialog API, inspired by the GameMaker Lan
 
 # Platforms Supported and Features Included
 
-Windows, macOS, Linux, FreeBSD, DragonFlyBSD, and, (in theory), PureDarwin, are supported. Linux, FreeBSD, and PureDarwin versions have dependencies. Includes Message Box with OK, OK/Cancel, Yes/No, Yes/No/Cancel, Retry/Cancel, Abort, Abort/Ignore, Input Box for strings and numbers, Password Box for strings and numbers, Open File, Multi-Select Files, Save File, Folder Browser, and Color Picker. The File Dialogs support Multiple Filters, each of which, may be selected from a drop-down menu. Running these functions outside the main thread on macOS requires the `dlgmod` CLI executable be downloaded, with the quarantine attribute removed, and placed in your Application Bundle's Resources folder. You may view and/or download its source code from the official `dlgmod` repository:
+Windows, macOS, Linux, FreeBSD, DragonFlyBSD, and, (in theory), PureDarwin, are supported. Linux, FreeBSD, DragonFlyBSD, and PureDarwin versions have dependencies. Includes Message Box with OK, OK/Cancel, Yes/No, Yes/No/Cancel, Retry/Cancel, Abort, Abort/Ignore, Input Box for strings and numbers, Password Box for strings and numbers, Open File, Multi-Select Files, Save File, Folder Browser, and Color Picker. The File Dialogs support Multiple Filters, each of which, may be selected from a drop-down menu. Running these functions outside the main thread on macOS requires the `dlgmod` CLI executable be downloaded, with the quarantine attribute removed, and placed in your Application Bundle's Resources folder. You may view and/or download its source code from the official `dlgmod` repository:
 
 https://github.com/time-killer-games/dlgmod
 
