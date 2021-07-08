@@ -39,7 +39,7 @@
 #include <algorithm>
 
 #include "../Universal/dlgmodule.h"
-#include "lodepng.h"
+#include "../Unix/lodepng.h"
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -62,6 +62,12 @@
 #elif defined(__FreeBSD__)
 #include <sys/user.h>
 #include <libutil.h>
+#elif defined(__DragonFly__)
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <sys/user.h>
+#include <libutil.h>
+#include <kvm.h>
 #endif
 
 using std::string;
@@ -320,6 +326,10 @@ static void PpidFromPid(pid_t procId, pid_t *parentProcId) {
 }
 #endif
 
+#if defined(__DragonFly__)
+static kvm_t *kd = nullptr;
+#endif
+
 static std::vector<pid_t> PidFromPpid(pid_t parentProcId) {
   std::vector<pid_t> vec;
   #if defined(__APPLE__) && defined(__MACH__)
@@ -348,6 +358,20 @@ static std::vector<pid_t> PidFromPpid(pid_t parentProcId) {
     for (int j = 0; j < cntp; j++) {
       if (proc_info[j].ki_ppid == parentProcId) {
         vec.push_back(proc_info[j].ki_pid);
+      }
+    }
+    free(proc_info);
+  }
+  #elif defined(__DragonFly__)
+  char errbuf[_POSIX2_LINE_MAX];
+  kinfo_proc *proc_info = nullptr; 
+  const char *nlistf, *memf; nlistf = memf = "/dev/null";
+  kd = kvm_openfiles(nlistf, memf, NULL, O_RDONLY, errbuf); if (!kd) return vec;
+  int cntp = 0; if ((proc_info = kvm_getprocs(kd, KERN_PROC_ALL, 0, &cntp))) {
+    for (int j = 0; j < cntp; j++) {
+      if (proc_info[j].kp_pid >= 0 && proc_info[j].kp_ppid >= 0 && 
+        proc_info[j].kp_ppid == parentProcId) {
+        vec.push_back(proc_info[j].kp_pid);
       }
     }
     free(proc_info);
