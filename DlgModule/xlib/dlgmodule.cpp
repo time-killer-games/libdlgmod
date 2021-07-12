@@ -39,7 +39,7 @@
 #include <algorithm>
 
 #include "../Universal/dlgmodule.h"
-#include "../Unix/lodepng.h"
+#include "lodepng.h"
 
 #include <sys/types.h>
 #include <sys/wait.h>
