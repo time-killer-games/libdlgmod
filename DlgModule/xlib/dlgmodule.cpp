@@ -39,7 +39,7 @@
 #include <algorithm>
 
 #include "../Universal/dlgmodule.h"
-#include "lodepng.h"
+#include "../Unix/lodepng.h"
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -337,11 +337,11 @@ static std::vector<pid_t> PidFromPpid(pid_t parentProcId) {
   std::vector<pid_t> proc_info(cntp);
   std::fill(proc_info.begin(), proc_info.end(), 0);
   proc_listpids(PROC_ALL_PIDS, 0, &proc_info[0], sizeof(pid_t) * cntp);
-  for (int j = cntp; j > 0; j--) {
-    if (proc_info[j] == 0) { continue; }
-    pid_t ppid; PpidFromPid(proc_info[j], &ppid);
+  for (int i = cntp; i > 0; i--) {
+    if (proc_info[i] == 0) { continue; }
+    pid_t ppid; PpidFromPid(proc_info[i], &ppid);
     if (ppid == parentProcId) {
-      vec.push_back(proc_info[j]);
+      vec.push_back(proc_info[i]);
     }
   }
   #elif defined(__linux__) && !defined(__ANDROID__)
@@ -355,9 +355,9 @@ static std::vector<pid_t> PidFromPpid(pid_t parentProcId) {
   closeproc(proc);
   #elif defined(__FreeBSD__)
   int cntp; if (kinfo_proc *proc_info = kinfo_getallproc(&cntp)) {
-    for (int j = 0; j < cntp; j++) {
-      if (proc_info[j].ki_ppid == parentProcId) {
-        vec.push_back(proc_info[j].ki_pid);
+    for (int i = 0; i < cntp; i++) {
+      if (proc_info[i].ki_ppid == parentProcId) {
+        vec.push_back(proc_info[i].ki_pid);
       }
     }
     free(proc_info);
@@ -368,10 +368,10 @@ static std::vector<pid_t> PidFromPpid(pid_t parentProcId) {
   const char *nlistf, *memf; nlistf = memf = "/dev/null";
   kd = kvm_openfiles(nlistf, memf, NULL, O_RDONLY, errbuf); if (!kd) return vec;
   int cntp = 0; if ((proc_info = kvm_getprocs(kd, KERN_PROC_ALL, 0, &cntp))) {
-    for (int j = 0; j < cntp; j++) {
-      if (proc_info[j].kp_pid >= 0 && proc_info[j].kp_ppid >= 0 && 
-        proc_info[j].kp_ppid == parentProcId) {
-        vec.push_back(proc_info[j].kp_pid);
+    for (int i = 0; i < cntp; i++) {
+      if (proc_info[i].kp_pid >= 0 && proc_info[i].kp_ppid >= 0 && 
+        proc_info[i].kp_ppid == parentProcId) {
+        vec.push_back(proc_info[i].kp_pid);
       }
     }
     free(proc_info);
@@ -399,6 +399,7 @@ static void *modify_shell_dialog(void *pid) {
       break;
     }
   }
+  if (file_exists(current_icon)) XSetIcon(display, wid, current_icon.c_str());
   XSetTransientForHint(display, wid, (Window)(std::intptr_t)owner);
   int len = caption.length() + 1; char *buffer = new char[len]();
   strcpy(buffer, caption.c_str()); XChangeProperty(display, wid,
