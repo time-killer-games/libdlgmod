@@ -379,6 +379,24 @@ namespace {
     return result_filtered;
   }
 
+  string filename_drive(string fname) {
+    #if defined(_WIN32)
+    size_t fp = fname.find_first_of("\\/");
+    #else
+    size_t fp = fname.find_first_of("/");
+    #endif
+    if (!fp || fp == string::npos || fname[fp - 1] != ':')
+      return "";
+    return fname.substr(0, fp);
+  }
+
+  bool directory_create(string dname) {
+    std::error_code ec;
+    dname = filename_remove_slash(dname, true);
+    const std::filesystem::path path = std::filesystem::u8path(dname);
+    return (std::filesystem::create_directories(path, ec) && ec.value() == 0);
+  }
+
   enum {
     openFile,
     openFiles,
@@ -472,6 +490,21 @@ namespace {
             }
           } else if (type == saveFile || type == selectFolder) {
             result = filename_canonical(ImGuiFileDialog::Instance()->GetFilePathName());
+            if (type == selectFolder) {
+              while (!result.empty() && result.back() == CHR_SLASH) {
+                result.pop_back();
+              }
+              #if defined(_WIN32)
+              if (!result.empty()) {
+                result.push_back(CHR_SLASH);
+              }
+              #else
+              result.push_back(CHR_SLASH);
+              #endif
+              if (!directory_exists(result)) {
+                directory_create(result);
+              }
+            }
           }
         }
         ImGuiFileDialog::Instance()->Close();
