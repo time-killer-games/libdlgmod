@@ -489,8 +489,10 @@ namespace {
               result.pop_back();
             }
           } else if (type == saveFile || type == selectFolder) {
-            result = filename_canonical(ImGuiFileDialog::Instance()->GetFilePathName());
-            if (type == selectFolder) {
+            result = ImGuiFileDialog::Instance()->GetFilePathName();
+            if (type == saveFile) {
+              result = string_replace_all(filename_canonical(result), ".*", "");
+            } else {
               while (!result.empty() && result.back() == CHR_SLASH) {
                 result.pop_back();
               }
@@ -501,9 +503,11 @@ namespace {
               #else
               result.push_back(CHR_SLASH);
               #endif
-              if (!directory_exists(result)) {
-                directory_create(result);
-              }
+              result = filename_canonical(result);
+              bool ret = (directory_exists(result) || strcmp(result.c_str(), 
+              (filename_drive(result + STR_SLASH) + STR_SLASH).c_str()) == 0);
+              if (!ret) ret = directory_create(result);
+              if (!ret) result = "";
             }
           }
         }
