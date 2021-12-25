@@ -465,16 +465,13 @@ namespace {
           if (type == openFile || type == openFiles) {
             auto selection = ImGuiFileDialog::Instance()->GetSelection();
             for (auto const& [key, val] : selection) {
-              result += val + string("\n");
+              result += filename_absolute(val) + string("\n");
             }
             if (!result.empty() && result.back() == '\n') {
               result.pop_back();
             }
           } else if (type == saveFile || type == selectFolder) {
-            result = ImGuiFileDialog::Instance()->GetFilePathName();
-            if (type == selectFolder && ((!result.empty() && result.back() != CHR_SLASH) || result.empty())) {
-              result.push_back(CHR_SLASH);
-            }
+            result = filename_canonical(ImGuiFileDialog::Instance()->GetFilePathName());
           }
         }
         ImGuiFileDialog::Instance()->Close();
