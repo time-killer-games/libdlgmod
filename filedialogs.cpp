@@ -33,6 +33,9 @@
 #include <map>
 
 #include "filedialogs.h"
+#if defined(__APPLE__) && defined(__MACH__)
+#include "modifywindow.h"
+#endif
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -444,6 +447,12 @@ namespace {
     HWND hWnd = system_info.info.win.window;
     SetWindowLongPtrW(hWnd, GWL_EXSTYLE, GetWindowLongPtrW(hWnd, GWL_EXSTYLE) | WS_EX_TOOLWINDOW | WS_EX_TOPMOST);
     SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    #elif defined(__APPLE__) && defined(__MACH__)
+    SDL_SysWMinfo system_info;
+    SDL_VERSION(&system_info.version);
+    if (!SDL_GetWindowWMInfo(window, &system_info)) return "";
+    void *nsWnd = (void *)system_info.info.cocoa.window;
+    modifywindow(nsWnd);
     #endif
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
