@@ -60,7 +60,7 @@
 #else
 #if defined(__APPLE__) && defined(__MACH__)
 #include <libproc.h>
-#elif defined(__FreeBSD__) || defined(__DragonFly__)
+#elif defined(__FreeBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
 #include <sys/sysctl.h>
 #include <sys/user.h>
 #endif
@@ -286,6 +286,15 @@ namespace {
       if (sysctl(mib, 4, buffer, &length, nullptr, 0) == 0) {
         path = string(buffer) + "\0";
       }
+    }
+    #elif defined(__OpenBSD__)
+    char **cmdbuf = nullptr; int cmdsize = 0;
+    cmdline_from_proc_id(proc_id, &cmdbuf, &cmdsize);
+    if (cmdsize) {
+      static std::string cmd;
+      cmd = cmdbuf[0]; 
+      *buffer = (char *)cmd.c_str();
+      free_cmdline(cmdbuf);
     }
     #endif
     return filename_path(path);
