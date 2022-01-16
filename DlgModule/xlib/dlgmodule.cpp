@@ -316,7 +316,7 @@ static void PpidFromPid(pid_t procId, pid_t *parentProcId) {
 }
 #endif
 
-#if defined(__DragonFly__)
+#if defined(__DragonFly__) || defined(__OpenBSD__)
 static kvm_t *kd = nullptr;
 #endif
 
