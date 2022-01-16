@@ -62,11 +62,10 @@
 #elif defined(__FreeBSD__)
 #include <sys/user.h>
 #include <libutil.h>
-#elif defined(__DragonFly__)
+#elif defined(__DragonFly__) || defined(__OpenBSD__)
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <sys/user.h>
-#include <libutil.h>
 #include <kvm.h>
 #endif
 
@@ -365,7 +364,20 @@ static std::vector<pid_t> PidFromPpid(pid_t parentProcId) {
         vec.push_back(proc_info[i].kp_pid);
       }
     }
-    free(proc_info);
+    kvm_close(kd);
+  }
+  #elif defined(__OpenBSD__)
+  char errbuf[_POSIX2_LINE_MAX];
+  kinfo_proc *proc_info = nullptr; int cntp = 0;
+  kd = kvm_openfiles(nullptr, nullptr, nullptr, KVM_NO_FILES, errbuf); if (!kd) return vec;
+  if ((proc_info = kvm_getprocs(kd, KERN_PROC_ALL, 0, sizeof(struct kinfo_proc), &cntp))) {
+    for (int i = cntp - 1; i >= 0; i--) {
+      if (proc_info[i].p_pid >= 0 && proc_info[i].p_ppid >= 0 &&
+        proc_info[i].p_ppid == parent_proc_id) {
+        vec.push_back(proc_info[i].p_pid);
+      }
+    }
+    kvm_close(kd);
   }
   #endif
   return vec;
