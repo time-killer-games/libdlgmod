@@ -7,7 +7,7 @@ elif [ $(uname) = "Linux" ]; then
 elif [ $(uname) = "FreeBSD" ]; then
   clang++ "DlgModule/Universal/dlgmodule.cpp" "DlgModule/xlib/dlgmodule.cpp" "DlgModule/xlib/lodepng.cpp" -o "libdlgmod.so" -std=c++17 -I/usr/local/include -L/usr/local/lib -shared -lX11 -lprocstat -lutil -lc -lpthread -fPIC
 elif [ $(uname) = "DragonFly" ]; then
-  g++ "DlgModule/Universal/dlgmodule.cpp" "DlgModule/xlib/dlgmodule.cpp" "DlgModule/xlib/lodepng.cpp" -o "libdlgmod.so" -std=c++17 -I/usr/local/include -L/usr/local/lib -shared -lX11 -lkvm -lc -lpthread -fPIC
+  g++ "DlgModule/Universal/dlgmodule.cpp" "DlgModule/xlib/dlgmodule.cpp" "DlgModule/xlib/lodepng.cpp" -o "libdlgmod.so" -std=c++17 -I/usr/local/include -L/usr/local/lib -shared -static-libgcc -static-libstdc++ -lX11 -lkvm -lc -lpthread -fPIC
 elif [ $(uname) = "OpenBSD" ]; then
   clang++ "DlgModule/Universal/dlgmodule.cpp" "DlgModule/xlib/dlgmodule.cpp" "DlgModule/xlib/lodepng.cpp" -o "libdlgmod.so" -std=c++17 -I/usr/local/include -L/usr/local/lib -shared -lX11 -lkvm -lc -lpthread -fPIC
 fi
