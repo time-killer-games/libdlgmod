@@ -260,6 +260,7 @@ namespace {
     return (ec.value() == 0) ? result : directory_get_current_working();
   }
 
+  string filename_canonical(string fname);
   string directory_get_executable_path() {
     string path;
     #if defined(_WIN32) 
@@ -288,13 +289,15 @@ namespace {
       }
     }
     #elif defined(__OpenBSD__)
-    char **cmdbuf = nullptr; int cmdsize = 0;
-    cmdline_from_proc_id(proc_id, &cmdbuf, &cmdsize);
-    if (cmdsize) {
-      static std::string cmd;
-      cmd = cmdbuf[0]; 
-      *buffer = (char *)cmd.c_str();
-      free_cmdline(cmdbuf);
+    char **argv = nullptr; size_t length; 
+    int mib[4] { CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_ARGV };
+    if (sysctl(mib, 4, nullptr, &length, nullptr, 0) == 0) {
+      if ((argv = (char **)malloc(length))) {
+        if (sysctl(mib, 4, argv, &length, nullptr, 0) == 0) {
+          path = filename_canonical(argv[0]);
+        }
+        free(argv);
+      }
     }
     #endif
     return filename_path(path);
