@@ -50,6 +50,7 @@
 #include <imgui_impl_sdl.h>
 #include <imgui_impl_opengl3.h>
 #include <lib/ImGuiFileDialog/ImGuiFileDialog.h>
+#include <lib/ImGuiFileDialog/filesystem.hpp>
 #include <unistd.h>
 #if defined(_WIN32) 
 #include <windows.h>
@@ -243,20 +244,20 @@ namespace {
 
   string directory_get_current_working() {
     std::error_code ec;
-    string result = filename_add_slash(std::filesystem::current_path(ec).u8string());
+    string result = filename_add_slash(std::filesystem::current_path(ec).string());
     return (ec.value() == 0) ? result : "";
   }
 
   bool directory_set_current_working(string dname) {
     std::error_code ec;
-    const std::filesystem::path path = std::filesystem::u8path(dname);
+    const std::filesystem::path path = std::filesystem::path(dname);
     std::filesystem::current_path(path, ec);
     return (ec.value() == 0);
   }
 
   string directory_get_temporary_path() {
     std::error_code ec;
-    string result = filename_add_slash(std::filesystem::temp_directory_path(ec).u8string());
+    string result = filename_add_slash(std::filesystem::temp_directory_path(ec).string());
     return (ec.value() == 0) ? result : directory_get_current_working();
   }
 
@@ -317,7 +318,7 @@ namespace {
   bool file_exists(string fname) {
     std::error_code ec;
     fname = environment_expand_variables(fname);
-    const std::filesystem::path path = std::filesystem::u8path(fname);
+    const std::filesystem::path path = std::filesystem::path(fname);
     return (std::filesystem::exists(path, ec) && ec.value() == 0 && 
       (!std::filesystem::is_directory(path, ec)) && ec.value() == 0);
   }
@@ -326,7 +327,7 @@ namespace {
     std::error_code ec;
     dname = filename_remove_slash(dname, false);
     dname = environment_expand_variables(dname);
-    const std::filesystem::path path = std::filesystem::u8path(dname);
+    const std::filesystem::path path = std::filesystem::path(dname);
     return (std::filesystem::exists(path, ec) && ec.value() == 0 && 
       std::filesystem::is_directory(path, ec) && ec.value() == 0);
   }
@@ -334,8 +335,8 @@ namespace {
   string filename_canonical(string fname) {
     std::error_code ec;
     fname = environment_expand_variables(fname);
-    const std::filesystem::path path = std::filesystem::u8path(fname);
-    string result = std::filesystem::weakly_canonical(path, ec).u8string();
+    const std::filesystem::path path = std::filesystem::path(fname);
+    string result = std::filesystem::weakly_canonical(path, ec).string();
     if (ec.value() == 0 && directory_exists(result)) {
       return filename_add_slash(result);
     }
@@ -356,17 +357,17 @@ namespace {
     std::error_code ec; vector<string> result_unfiltered;
     if (!directory_exists(dname)) return result_unfiltered;
     dname = filename_remove_slash(dname, true);
-    const std::filesystem::path path = std::filesystem::u8path(dname);
+    const std::filesystem::path path = std::filesystem::path(dname);
     if (directory_exists(dname)) {
       std::filesystem::directory_iterator end_itr;
       for (std::filesystem::directory_iterator dir_ite(path, ec); dir_ite != end_itr; dir_ite++) {
         message_pump();
         if (ec.value() != 0) { break; }
-        std::filesystem::path file_path = std::filesystem::u8path(filename_absolute(dir_ite->path().u8string()));
+        std::filesystem::path file_path = std::filesystem::path(filename_absolute(dir_ite->path().string()));
         if (!std::filesystem::is_directory(dir_ite->status(ec)) && ec.value() == 0) {
-          result_unfiltered.push_back(file_path.u8string());
+          result_unfiltered.push_back(file_path.string());
         } else if (ec.value() == 0 && includedirs) {
-          result_unfiltered.push_back(filename_add_slash(file_path.u8string()));
+          result_unfiltered.push_back(filename_add_slash(file_path.string()));
         }
       }
     }
@@ -408,7 +409,7 @@ namespace {
   bool directory_create(string dname) {
     std::error_code ec;
     dname = filename_remove_slash(dname, true);
-    const std::filesystem::path path = std::filesystem::u8path(dname);
+    const std::filesystem::path path = std::filesystem::path(dname);
     return (std::filesystem::create_directories(path, ec) && ec.value() == 0);
   }
 
