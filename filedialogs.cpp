@@ -37,7 +37,6 @@
 #include "modifywindow.h"
 #endif
 
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_syswm.h>
@@ -54,17 +53,9 @@
 #include <unistd.h>
 #if defined(_WIN32) 
 #include <windows.h>
-#include <share.h>
-#include <io.h>
 #define STR_SLASH "\\"
 #define CHR_SLASH '\\'
 #else
-#if defined(__APPLE__) && defined(__MACH__)
-#include <libproc.h>
-#elif defined(__FreeBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
-#include <sys/sysctl.h>
-#include <sys/user.h>
-#endif
 #define STR_SLASH "/"
 #define CHR_SLASH '/'
 #endif
@@ -169,20 +160,6 @@ namespace {
     return fname.substr(fp);
   }
 
-  void write_temporary_file(string fname, unsigned char *str, size_t len) {
-    FILE *fp = nullptr;
-    #if defined(_WIN32)
-    wstring wfname = widen(fname);
-    if (_wfopen_s(&fp, wfname.c_str(), L"wb, ccs=UTF-8")) 
-    return;
-    #else
-    fp = fopen(fname.c_str(), "wb" );
-    #endif
-    if (!fp) return;
-    fwrite((char *)str, sizeof(char), len, fp);
-    fclose(fp);
-  }
-
   string environment_get_variable(string name) {
     #if defined(_WIN32)
     string value;
@@ -219,14 +196,14 @@ namespace {
 
   string filename_canonical(string fname);
   string filename_remove_slash(string dname, bool canonical = false) {
-    if (canonical) dname = filename_canonical(dname);
+    if (canonical) dname = ngs::fs::filename_canonical(dname);
     #if defined(_WIN32)
     while (dname.back() == '\\' || dname.back() == '/') {
       message_pump(); dname.pop_back();
     }
     #else
-    while (dname.back() == '/') {
-      message_pump(); dname.pop_back();
+    while (dname.back() == '/' && (!dname.empty() && dname[0] != '/' && dname.length() != 1)) {
+      dname.pop_back();
     }
     #endif
     return dname;
@@ -244,64 +221,21 @@ namespace {
 
   string directory_get_current_working() {
     std::error_code ec;
-    string result = filename_add_slash(std::filesystem::current_path(ec).string());
+    string result = filename_add_slash(ghc::filesystem::current_path(ec).string());
     return (ec.value() == 0) ? result : "";
   }
 
   bool directory_set_current_working(string dname) {
     std::error_code ec;
-    const std::filesystem::path path = std::filesystem::path(dname);
-    std::filesystem::current_path(path, ec);
+    const ghc::filesystem::path path = ghc::filesystem::path(dname);
+    ghc::filesystem::current_path(path, ec);
     return (ec.value() == 0);
   }
 
   string directory_get_temporary_path() {
     std::error_code ec;
-    string result = filename_add_slash(std::filesystem::temp_directory_path(ec).string());
+    string result = filename_add_slash(ghc::filesystem::temp_directory_path(ec).string());
     return (ec.value() == 0) ? result : directory_get_current_working();
-  }
-
-  string filename_canonical(string fname);
-  string directory_get_executable_path() {
-    string path;
-    #if defined(_WIN32) 
-    wchar_t buffer[MAX_PATH];
-    if (GetModuleFileNameW(nullptr, buffer, MAX_PATH) != 0) {
-      path = narrow(buffer);
-    }
-    #elif defined(__APPLE__) && defined(__MACH__)
-    char buffer[PROC_PIDPATHINFO_MAXSIZE];
-    if (proc_pidpath(getpid(), buffer, sizeof(buffer)) > 0) {
-      path = string(buffer) + "\0";
-    }
-    #elif defined(__linux__)
-    char *buffer = realpath("/proc/self/exe", nullptr);
-    path = buffer ? buffer : "";
-    free(buffer);
-    #elif defined(__FreeBSD__) || defined(__DragonFly__)
-    size_t length;
-    // CTL_KERN::KERN_PROC::KERN_PROC_PATHNAME(-1)
-    int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
-    if (sysctl(mib, 4, nullptr, &length, nullptr, 0) == 0) {
-      path.resize(length, '\0');
-      char *buffer = path.data();
-      if (sysctl(mib, 4, buffer, &length, nullptr, 0) == 0) {
-        path = string(buffer) + "\0";
-      }
-    }
-    #elif defined(__OpenBSD__)
-    char **argv = nullptr; size_t length; 
-    int mib[4] { CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_ARGV };
-    if (sysctl(mib, 4, nullptr, &length, nullptr, 0) == 0) {
-      if ((argv = (char **)malloc(length))) {
-        if (sysctl(mib, 4, argv, &length, nullptr, 0) == 0) {
-          path = filename_canonical(argv[0]);
-        }
-        free(argv);
-      }
-    }
-    #endif
-    return filename_path(path);
   }
 
   string environment_expand_variables(string str) {
@@ -318,25 +252,25 @@ namespace {
   bool file_exists(string fname) {
     std::error_code ec;
     fname = environment_expand_variables(fname);
-    const std::filesystem::path path = std::filesystem::path(fname);
-    return (std::filesystem::exists(path, ec) && ec.value() == 0 && 
-      (!std::filesystem::is_directory(path, ec)) && ec.value() == 0);
+    const ghc::filesystem::path path = ghc::filesystem::path(fname);
+    return (ghc::filesystem::exists(path, ec) && ec.value() == 0 && 
+      (!ghc::filesystem::is_directory(path, ec)) && ec.value() == 0);
   }
 
   bool directory_exists(string dname) {
     std::error_code ec;
     dname = filename_remove_slash(dname, false);
     dname = environment_expand_variables(dname);
-    const std::filesystem::path path = std::filesystem::path(dname);
-    return (std::filesystem::exists(path, ec) && ec.value() == 0 && 
-      std::filesystem::is_directory(path, ec) && ec.value() == 0);
+    const ghc::filesystem::path path = ghc::filesystem::path(dname);
+    return (ghc::filesystem::exists(path, ec) && ec.value() == 0 && 
+      ghc::filesystem::is_directory(path, ec) && ec.value() == 0);
   }
 
   string filename_canonical(string fname) {
     std::error_code ec;
     fname = environment_expand_variables(fname);
-    const std::filesystem::path path = std::filesystem::path(fname);
-    string result = std::filesystem::weakly_canonical(path, ec).string();
+    const ghc::filesystem::path path = ghc::filesystem::path(fname);
+    string result = ghc::filesystem::weakly_canonical(path, ec).string();
     if (ec.value() == 0 && directory_exists(result)) {
       return filename_add_slash(result);
     }
@@ -357,14 +291,13 @@ namespace {
     std::error_code ec; vector<string> result_unfiltered;
     if (!directory_exists(dname)) return result_unfiltered;
     dname = filename_remove_slash(dname, true);
-    const std::filesystem::path path = std::filesystem::path(dname);
+    const ghc::filesystem::path path = ghc::filesystem::path(dname);
     if (directory_exists(dname)) {
-      std::filesystem::directory_iterator end_itr;
-      for (std::filesystem::directory_iterator dir_ite(path, ec); dir_ite != end_itr; dir_ite++) {
-        message_pump();
-        if (ec.value() != 0) { break; }
-        std::filesystem::path file_path = std::filesystem::path(filename_absolute(dir_ite->path().string()));
-        if (!std::filesystem::is_directory(dir_ite->status(ec)) && ec.value() == 0) {
+      ghc::filesystem::directory_iterator end_itr;
+      for (ghc::filesystem::directory_iterator dir_ite(path, ec); dir_ite != end_itr; dir_ite.increment(ec)) {
+        message_pump(); if (ec.value() != 0) { break; }
+        ghc::filesystem::path file_path = ghc::filesystem::path(filename_absolute(dir_ite->path().string()));
+        if (!ghc::filesystem::is_directory(dir_ite->status(ec)) && ec.value() == 0) {
           result_unfiltered.push_back(file_path.string());
         } else if (ec.value() == 0 && includedirs) {
           result_unfiltered.push_back(filename_add_slash(file_path.string()));
@@ -409,8 +342,8 @@ namespace {
   bool directory_create(string dname) {
     std::error_code ec;
     dname = filename_remove_slash(dname, true);
-    const std::filesystem::path path = std::filesystem::path(dname);
-    return (std::filesystem::create_directories(path, ec) && ec.value() == 0);
+    const ghc::filesystem::path path = ghc::filesystem::path(dname);
+    return (ghc::filesystem::create_directories(path, ec) && ec.value() == 0);
   }
 
   enum {
@@ -472,7 +405,7 @@ namespace {
     SDL_GL_SetSwapInterval(1);
     IMGUI_CHECKVERSION();
     ImGui::CreateContext(); if (environment_get_variable("IMGUI_FONT_PATH").empty())
-    environment_set_variable("IMGUI_FONT_PATH", directory_get_executable_path() + "fonts");
+    environment_set_variable("IMGUI_FONT_PATH", directory_get_current_working() + "fonts");
     if (environment_get_variable("IMGUI_FONT_SIZE").empty())
     environment_set_variable("IMGUI_FONT_SIZE", std::to_string(30));
     ImGuiIO& io = ImGui::GetIO(); (void)io; ImFontConfig config; 
@@ -555,7 +488,7 @@ namespace {
 namespace ngs::imgui {
 
   string get_open_filename(string filter, string fname) {
-    return file_dialog_helper(filter, fname, directory_get_executable_path(), "Open", openFile);
+    return file_dialog_helper(filter, fname, directory_get_current_working(), "Open", openFile);
   }
 
   string get_open_filename_ext(string filter, string fname, string dir, string title) {
@@ -563,7 +496,7 @@ namespace ngs::imgui {
   }
 
   string get_open_filenames(string filter, string fname) {
-    return file_dialog_helper(filter, fname, directory_get_executable_path(), "Open", openFiles);
+    return file_dialog_helper(filter, fname, directory_get_current_working(), "Open", openFiles);
   }
  
   string get_open_filenames_ext(string filter, string fname, string dir, string title) {
@@ -571,7 +504,7 @@ namespace ngs::imgui {
   }
 
   string get_save_filename(string filter, string fname) {
-    return file_dialog_helper(filter, fname, directory_get_executable_path(), "Save As", saveFile);
+    return file_dialog_helper(filter, fname, directory_get_current_working(), "Save As", saveFile);
   }
 
   string get_save_filename_ext(string filter, string fname, string dir, string title) {
