@@ -196,7 +196,7 @@ namespace {
 
   string filename_canonical(string fname);
   string filename_remove_slash(string dname, bool canonical = false) {
-    if (canonical) dname = ngs::fs::filename_canonical(dname);
+    if (canonical) dname = filename_canonical(dname);
     #if defined(_WIN32)
     while (dname.back() == '\\' || dname.back() == '/') {
       message_pump(); dname.pop_back();
