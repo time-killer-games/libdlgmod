@@ -787,10 +787,7 @@ char *get_open_filename_ext(char *filter, char *fname, char *dir, char *title) {
   string str_iconflag = (dm_dialogengine == dm_zenity) ? " --window-icon=\"" : " --icon \"";
   if (current_icon == "") current_icon = filename_absolute("assets/icon.png");
   string str_icon = file_exists(current_icon) ? str_iconflag + add_escaping(current_icon, false, "") + string("\"") : "";
-
-  string str_path = fname;
-  if (str_dir[0] != '\0') str_path = str_dir + string("/") + str_fname;
-  str_fname = (char *)str_path.c_str();
+  string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
 
   if (dm_dialogengine == dm_zenity) {
     str_command = string("ans=$(zenity ") +
@@ -798,8 +795,8 @@ char *get_open_filename_ext(char *filter, char *fname, char *dir, char *title) {
     add_escaping(str_fname, false, "") + string("\"") + zenity_filter(filter) + str_icon + string(");echo $ans");
   }
   else if (dm_dialogengine == dm_kdialog) {
-    pwd = ""; if (str_fname.c_str() && str_fname[0] != '/' && str_fname.length()) pwd = string("\"$HOME/\"") +
-      string("\"") + add_escaping(str_fname, false, "") + string("\""); else pwd = "\"$HOME/\"";
+    if (str_dir.empty()) pwd = string("\"$HOME/") + add_escaping(str_fname, false, "") + string("\"");
+    else pwd = string("\"") + add_escaping(str_path, str_path, false, "") + string("\"");
 
     str_command = string("ans=$(kdialog ") +
     string("--getopenfilename ") + pwd + kdialog_filter(filter) +
@@ -831,7 +828,7 @@ char *get_open_filenames_ext(char *filter, char *fname, char *dir, char *title) 
   string str_iconflag = (dm_dialogengine == dm_zenity) ? " --window-icon=\"" : " --icon \"";
   if (current_icon == "") current_icon = filename_absolute("assets/icon.png");
   string str_icon = file_exists(current_icon) ? str_iconflag + add_escaping(current_icon, false, "") + string("\"") : "";
-  if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
+  string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
 
   if (dm_dialogengine == dm_zenity) {
     str_command = string("zenity ") +
@@ -879,7 +876,7 @@ char *get_save_filename_ext(char *filter, char *fname, char *dir, char *title) {
   string str_iconflag = (dm_dialogengine == dm_zenity) ? " --window-icon=\"" : " --icon \"";
   if (current_icon == "") current_icon = filename_absolute("assets/icon.png");
   string str_icon = file_exists(current_icon) ? str_iconflag + add_escaping(current_icon, false, "") + string("\"") : "";
-  if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
+  string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
 
   if (dm_dialogengine == dm_zenity) {
     str_command = string("ans=$(zenity ") +
