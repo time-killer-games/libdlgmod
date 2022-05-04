@@ -792,7 +792,7 @@ char *get_open_filename_ext(char *filter, char *fname, char *dir, char *title) {
   if (dm_dialogengine == dm_zenity) {
     str_command = string("ans=$(zenity ") +
     string("--file-selection --title=\"") + str_title + string("\" --filename=\"") +
-    add_escaping(str_fname, false, "") + string("\"") + zenity_filter(filter) + str_icon + string(");echo $ans");
+    add_escaping(str_path, false, "") + string("\"") + zenity_filter(filter) + str_icon + string(");echo $ans");
   }
   else if (dm_dialogengine == dm_kdialog) {
     if (str_dir.empty()) pwd = string("\"$HOME/") + add_escaping(str_fname, false, "") + string("\"");
@@ -833,7 +833,7 @@ char *get_open_filenames_ext(char *filter, char *fname, char *dir, char *title) 
   if (dm_dialogengine == dm_zenity) {
     str_command = string("zenity ") +
     string("--file-selection --multiple --separator='\n' --title=\"") + str_title + string("\" --filename=\"") +
-    add_escaping(str_fname, false, "") + string("\"") + zenity_filter(filter) + str_icon;
+    add_escaping(str_path, false, "") + string("\"") + zenity_filter(filter) + str_icon;
   }
   else if (dm_dialogengine == dm_kdialog) {
     if (str_dir.empty()) pwd = string("\"$HOME/") + add_escaping(str_fname, false, "") + string("\"");
@@ -881,7 +881,7 @@ char *get_save_filename_ext(char *filter, char *fname, char *dir, char *title) {
   if (dm_dialogengine == dm_zenity) {
     str_command = string("ans=$(zenity ") +
     string("--file-selection  --save --confirm-overwrite --title=\"") + str_title + string("\" --filename=\"") +
-    add_escaping(str_fname, false, "") + string("\"") + zenity_filter(filter) + str_icon + string(");echo $ans");
+    add_escaping(str_path, false, "") + string("\"") + zenity_filter(filter) + str_icon + string(");echo $ans");
   }
   else if (dm_dialogengine == dm_kdialog) {
     if (str_dir.empty()) pwd = string("\"$HOME/") + add_escaping(str_fname, false, "") + string("\"");
