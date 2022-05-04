@@ -796,7 +796,7 @@ char *get_open_filename_ext(char *filter, char *fname, char *dir, char *title) {
   }
   else if (dm_dialogengine == dm_kdialog) {
     if (str_dir.empty()) pwd = string("\"$HOME/") + add_escaping(str_fname, false, "") + string("\"");
-    else pwd = string("\"") + add_escaping(str_path, str_path, false, "") + string("\"");
+    else pwd = string("\"") + add_escaping(str_path, false, "") + string("\"");
 
     str_command = string("ans=$(kdialog ") +
     string("--getopenfilename ") + pwd + kdialog_filter(filter) +
@@ -837,7 +837,7 @@ char *get_open_filenames_ext(char *filter, char *fname, char *dir, char *title) 
   }
   else if (dm_dialogengine == dm_kdialog) {
     if (str_dir.empty()) pwd = string("\"$HOME/") + add_escaping(str_fname, false, "") + string("\"");
-    else pwd = string("\"") + add_escaping(str_path, str_path, false, "") + string("\"");
+    else pwd = string("\"") + add_escaping(str_path, false, "") + string("\"");
 
     str_command = string("kdialog ") +
     string("--getopenfilename ") + pwd + kdialog_filter(filter) +
@@ -885,7 +885,7 @@ char *get_save_filename_ext(char *filter, char *fname, char *dir, char *title) {
   }
   else if (dm_dialogengine == dm_kdialog) {
     if (str_dir.empty()) pwd = string("\"$HOME/") + add_escaping(str_fname, false, "") + string("\"");
-    else pwd = string("\"") + add_escaping(str_path, str_path, false, "") + string("\"");
+    else pwd = string("\"") + add_escaping(str_path, false, "") + string("\"");
 
     str_command = string("ans=$(kdialog ") +
     string("--getsavefilename ") + pwd + kdialog_filter(filter) +
