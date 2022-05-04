@@ -798,8 +798,8 @@ char *get_open_filename_ext(char *filter, char *fname, char *dir, char *title) {
     add_escaping(str_fname, false, "") + string("\"") + zenity_filter(filter) + str_icon + string(");echo $ans");
   }
   else if (dm_dialogengine == dm_kdialog) {
-    pwd = ""; if (str_fname.c_str() && str_fname[0] != '/' && str_fname.length()) pwd = string("\"$PWD/\"") +
-      string("\"") + add_escaping(str_fname, false, "") + string("\""); else pwd = "\"$PWD/\"";
+    pwd = ""; if (str_fname.c_str() && str_fname[0] != '/' && str_fname.length()) pwd = string("\"$HOME/\"") +
+      string("\"") + add_escaping(str_fname, false, "") + string("\""); else pwd = "\"$HOME/\"";
 
     str_command = string("ans=$(kdialog ") +
     string("--getopenfilename ") + pwd + kdialog_filter(filter) +
@@ -842,8 +842,8 @@ char *get_open_filenames_ext(char *filter, char *fname, char *dir, char *title) 
     add_escaping(str_fname, false, "") + string("\"") + zenity_filter(filter) + str_icon;
   }
   else if (dm_dialogengine == dm_kdialog) {
-    pwd = ""; if (str_fname.c_str() && str_fname[0] != '/' && str_fname.length()) pwd = string("\"$PWD/\"") +
-      string("\"") + add_escaping(str_fname, false, "") + string("\""); else pwd = "\"$PWD/\"";
+    pwd = ""; if (str_fname.c_str() && str_fname[0] != '/' && str_fname.length()) pwd = string("\"$HOME/\"") +
+      string("\"") + add_escaping(str_fname, false, "") + string("\""); else pwd = "\"$HOME/\"";
 
     str_command = string("kdialog ") +
     string("--getopenfilename ") + pwd + kdialog_filter(filter) +
@@ -893,8 +893,8 @@ char *get_save_filename_ext(char *filter, char *fname, char *dir, char *title) {
     add_escaping(str_fname, false, "") + string("\"") + zenity_filter(filter) + str_icon + string(");echo $ans");
   }
   else if (dm_dialogengine == dm_kdialog) {
-    pwd = ""; if (str_fname.c_str() && str_fname[0] != '/' && str_fname.length()) pwd = string("\"$PWD/\"") +
-      string("\"") + add_escaping(str_fname, false, "") + string("\""); else pwd = "\"$PWD/\"";
+    pwd = ""; if (str_fname.c_str() && str_fname[0] != '/' && str_fname.length()) pwd = string("\"$HOME/\"") +
+      string("\"") + add_escaping(str_fname, false, "") + string("\""); else pwd = "\"$HOME/\"";
 
     str_command = string("ans=$(kdialog ") +
     string("--getsavefilename ") + pwd + kdialog_filter(filter) +
@@ -929,8 +929,8 @@ char *get_directory_alt(char *capt, char *root) {
     add_escaping(str_dname, false, "") + string("\"") + str_icon + str_end;
   }
   else if (dm_dialogengine == dm_kdialog) {
-    if (str_dname.c_str() && str_dname[0] != '/' && str_dname.length()) pwd = string("\"$PWD/\"") +
-      string("\"") + add_escaping(str_dname, false, "") + string("\""); else pwd = "\"$PWD/\"";
+    if (str_dname.c_str() && str_dname[0] != '/' && str_dname.length()) pwd = string("\"$HOME/\"") +
+      string("\"") + add_escaping(str_dname, false, "") + string("\""); else pwd = "\"$HOME/\"";
 
     str_command = string("ans=$(kdialog ") +
     string("--getexistingdirectory ") + pwd + string(" --title \"") + str_title + string("\"") + str_icon + str_end;
