@@ -114,12 +114,16 @@ namespace dialog_module {
     string btn_array[btn_array_len] = { "Abort", "Ignore", "OK", "Cancel", "Yes", "No", "Retry" };
 
     wstring widen(string tstr) {
-      size_t wchar_count = tstr.size() + 1; vector<wchar_t> buf(wchar_count);
+      if (tstr.empty()) return L"";
+      size_t wchar_count = tstr.size() + 1; 
+      vector<wchar_t> buf(wchar_count);
       return wstring{ buf.data(), (size_t)MultiByteToWideChar(CP_UTF8, 0, tstr.c_str(), -1, buf.data(), (int)wchar_count) };
     }
 
     string narrow(wstring wstr) {
-      int nbytes = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.length(), nullptr, 0, nullptr, nullptr); vector<char> buf(nbytes);
+      if (wstr.empty()) return "";
+      int nbytes = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.length(), nullptr, 0, nullptr, nullptr); 
+      vector<char> buf(nbytes);
       return string{ buf.data(), (size_t)WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.length(), buf.data(), nbytes, nullptr, nullptr) };
     }
 
