@@ -241,11 +241,18 @@ int cocoa_show_error(const char *str, bool _abort, const char *icon, const char 
     evaluate_shell(cstring_concat(cstring_concat("chmod +x \"", escquotes([[[NSBundle mainBundle] resourcePath] UTF8String])), "/dlgmod\""));
     const char *defaultIcon = [[[[NSBundle mainBundle] infoDictionary] valueForKey:@"CFBundleIconFile"] UTF8String];
     const char *currentIcon = (file_exists(icon)) ? icon : defaultIcon;
+    #if defined(DLGMOD_CLI)
+    return cstring_to_integer(evaluate_shell(cstring_concat(cstring_concat(cstring_concat(cstring_concat(
+    cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat("\"", [[[NSBundle mainBundle] resourcePath]
+    UTF8String]), "/dlgmod\" --"), "show-error \""), escquotes(str)), (_abort) ? "\" 1 \"" : "\" 0 \""),
+    escquotes(currentIcon)), "\" \""), escquotes(title)), "\"")));
+    #else
     int result = cstring_to_integer(evaluate_shell(cstring_concat(cstring_concat(cstring_concat(cstring_concat(
     cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat("\"", [[[NSBundle mainBundle] resourcePath]
     UTF8String]), "/dlgmod\" --"), "show-error \""), escquotes(str)), (_abort) ? "\" 1 \"" : "\" 0 \""),
     escquotes(currentIcon)), "\" \""), escquotes(title)), "\"")));
     if (result == 0) exit(0); return result;
+    #endif
   }
 
   NSString *myStr = [NSString stringWithUTF8String:str];
