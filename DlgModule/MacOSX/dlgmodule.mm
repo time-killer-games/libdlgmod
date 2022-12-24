@@ -35,7 +35,7 @@
 #include <vector>
 #include <map>
 
-#include "../Universal/dlgmodule.h"
+#include "dlgmodule.h"
 #include "filedialogs.h"
 #include "config.h"
 
@@ -46,6 +46,8 @@
 
 using std::string;
 using std::vector;
+
+using std::string;
 
 enum BUTTON_TYPES {
   BUTTON_ABORT,
@@ -237,11 +239,10 @@ int cocoa_show_error(const char *str, bool _abort, const char *icon, const char 
     evaluate_shell(cstring_concat(cstring_concat("chmod +x \"", escquotes([[[NSBundle mainBundle] resourcePath] UTF8String])), "/dlgmod\""));
     const char *defaultIcon = [[[[NSBundle mainBundle] infoDictionary] valueForKey:@"CFBundleIconFile"] UTF8String];
     const char *currentIcon = (file_exists(icon)) ? icon : defaultIcon;
-    int result = cstring_to_integer(evaluate_shell(cstring_concat(cstring_concat(cstring_concat(cstring_concat(
+    return cstring_to_integer(evaluate_shell(cstring_concat(cstring_concat(cstring_concat(cstring_concat(
     cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat("\"", [[[NSBundle mainBundle] resourcePath]
     UTF8String]), "/dlgmod\" --"), "show-error \""), escquotes(str)), (_abort) ? "\" 1 \"" : "\" 0 \""),
     escquotes(currentIcon)), "\" \""), escquotes(title)), "\"")));
-    if (result == 0) exit(0); return result;
   }
 
   NSString *myStr = [NSString stringWithUTF8String:str];
@@ -478,17 +479,20 @@ int cocoa_get_color(int defcol, const char *title) {
     if ([[myColorPanel standardWindowButton:NSWindowCloseButton] state] == NSControlStateValueOn) {
       [[myColorPanel standardWindowButton:NSWindowCloseButton] setState:NSControlStateValueOff];
       [NSApp endModalSession:colorSession];
+      break;
     }
 
     if ([myOKButton state] == NSControlStateValueOn) {
       [NSApp endModalSession:colorSession];
       colorOKPressed = true;
       [myColorPanel close];
+      break;
     }
 
     if ([myCancelButton state] == NSControlStateValueOn) {
       [NSApp endModalSession:colorSession];
       [myColorPanel close];
+      break;
     }
   }
 
