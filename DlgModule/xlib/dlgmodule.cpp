@@ -372,7 +372,7 @@ static inline void modify_shell_dialog(XPROCID pid) {
   XInternAtom(display, "_NET_WM_NAME", false),
   XInternAtom(display, "UTF8_STRING", false),
   8, PropModeReplace, (unsigned char *)buffer, len);
-  delete[] buffer; if (modifyInit < 20) {
+  delete[] buffer; if (modifyInit < 200) {
   XSynchronize(display, true); XRaiseWindow(display, wid);
   XSetInputFocus(display, wid, RevertToPointerRoot, CurrentTime);
   XFlush(display); modifyInit++; }
