@@ -38,6 +38,7 @@
 #include <vector>
 #include <sstream>
 #include <algorithm>
+#include <unordered_map>
 
 #include "../Universal/dlgmodule.h"
 #include "lib/cproc/cproc.hpp"
