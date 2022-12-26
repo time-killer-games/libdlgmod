@@ -754,6 +754,7 @@ char *get_open_filename_ext(char *filter, char *fname, char *dir, char *title) {
   string caption_previous = caption;
   if (dm_dialogengine == dm_zenity) {
     string str_title = add_escaping(title, true, "Open");
+    caption = (str_title == "Open") ? "Open" : title;
     string str_fname = filename_name(filename_absolute(fname));
     string str_dir = filename_absolute(dir);
     string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
@@ -789,6 +790,7 @@ char *get_open_filenames_ext(char *filter, char *fname, char *dir, char *title) 
   string caption_previous = caption;
   if (dm_dialogengine == dm_zenity) {
     string str_title = add_escaping(title, true, "Open");
+    caption = (str_title == "Open") ? "Open" : title;
     string str_fname = filename_name(filename_absolute(fname));
     string str_dir = filename_absolute(dir);
     string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
@@ -830,6 +832,7 @@ char *get_save_filename_ext(char *filter, char *fname, char *dir, char *title) {
   string caption_previous = caption;
   if (dm_dialogengine == dm_zenity) {
     string str_title = add_escaping(title, true, "Save As");
+    caption = (str_title == "Save As") ? "Save As" : title;
     string str_fname = filename_name(filename_absolute(fname));
     string str_dir = filename_absolute(dir);
     string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
@@ -863,6 +866,7 @@ char *get_directory_alt(char *capt, char *root) {
   string caption_previous = caption;
   if (dm_dialogengine == dm_zenity) {
     string str_title = add_escaping(capt, true, "Select Directory");
+    caption = (str_title == "Select Directory") ? "Select Directory" : capt;
     string str_dname = root;
     string str_end = ");if [ $ans = / ] ;then echo $ans;elif [ $? = 1 ] ;then echo $ans/;else echo $ans;fi";
     str_command = string("ans=$(zenity ") +
