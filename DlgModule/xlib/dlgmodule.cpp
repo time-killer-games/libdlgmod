@@ -31,6 +31,7 @@
 #include <cstring>
 #include <climits>
 
+#include <mutex>
 #include <string>
 #include <thread>
 #include <chrono>
@@ -39,6 +40,7 @@
 #include <algorithm>
 
 #include "../Universal/dlgmodule.h"
+#include "lib/cproc/cproc.hpp"
 #include "lodepng.h"
 
 #include <sys/types.h>
@@ -53,21 +55,6 @@
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
-
-#if defined(__APPLE__) && defined(__MACH__)
-#include <sys/proc_info.h>
-#include <libproc.h>
-#elif defined(__linux__) && !defined(__ANDROID__)
-#include <proc/readproc.h>
-#elif defined(__FreeBSD__)
-#include <sys/user.h>
-#include <libutil.h>
-#elif defined(__DragonFly__) || defined(__OpenBSD__)
-#include <sys/param.h>
-#include <sys/sysctl.h>
-#include <sys/user.h>
-#include <kvm.h>
-#endif
 
 using std::string;
 using std::to_string;
@@ -109,18 +96,6 @@ int      dialog_xpos   = 0;
 int      dialog_ypos   = 0;
 unsigned dialog_width  = 0;
 unsigned dialog_height = 0;
-
-void change_relative_to_kwin() {
-  setenv("WAYLAND_DISPLAY", "", 1);
-  if (dm_dialogengine == dm_x11) {
-    Display *display = XOpenDisplay(nullptr);
-    Atom aKWinRunning = XInternAtom(display, "KWIN_RUNNING", true);
-    bool bKWinRunning = (aKWinRunning != None);
-    if (bKWinRunning) dm_dialogengine = dm_kdialog;
-    else dm_dialogengine = dm_zenity;
-    XCloseDisplay(display);
-  }
-}
 
 unsigned nlpo2dc(unsigned x) {
   x--;
@@ -220,52 +195,64 @@ string filename_ext(string fname) {
   return fname.substr(fp);
 }
 
-static int XErrorHandlerImpl(Display *display, XErrorEvent *event) {
+static inline int XErrorHandlerImpl(Display *display, XErrorEvent *event) {
   return 0;
 }
 
-static int XIOErrorHandlerImpl(Display *display) {
+static inline int XIOErrorHandlerImpl(Display *display) {
   return 0;
 }
 
-static void SetErrorHandlers() {
+static inline void SetErrorHandlers() {
   XSetErrorHandler(XErrorHandlerImpl);
   XSetIOErrorHandler(XIOErrorHandlerImpl);
 }
 
-static unsigned long GetActiveWidOrWindowPid(Display *display, Window window, bool wid) {
-  SetErrorHandlers();
-  unsigned char *prop;
-  unsigned long property = 0;
-  Atom actual_type, filter_atom;
-  int actual_format, status;
-  unsigned long nitems, bytes_after;
-  filter_atom = XInternAtom(display, wid ? "_NET_ACTIVE_WINDOW" : "_NET_WM_PID", true);
-  status = XGetWindowProperty(display, window, filter_atom, 0, 1000, false,
-  AnyPropertyType, &actual_type, &actual_format, &nitems, &bytes_after, &prop);
-  if (status == Success && prop != nullptr) {
-    property = prop[0] + (prop[1] << 8) + (prop[2] << 16) + (prop[3] << 24);
-    XFree(prop);
+void change_relative_to_kwin() {
+  setenv("WAYLAND_DISPLAY", "", 1);
+  if (dm_dialogengine == dm_x11) {
+    Display *display = XOpenDisplay(nullptr);
+    Atom aKWinRunning = XInternAtom(display, "KWIN_RUNNING", true);
+    bool bKWinRunning = (aKWinRunning != None);
+    if (bKWinRunning) dm_dialogengine = dm_kdialog;
+    else dm_dialogengine = dm_zenity;
+    XCloseDisplay(display);
   }
-  return property;
 }
 
-static Window WidFromTop(Display *display) {
-  SetErrorHandlers();
-  int screen = XDefaultScreen(display);
-  Window window = RootWindow(display, screen);
-  return (Window)GetActiveWidOrWindowPid(display, window, true);
+static int index = -1;
+static std::unordered_map<int, XPROCID> child_proc_id;
+static std::unordered_map<int, bool> proc_did_execute;
+static std::unordered_map<CPROCID, std::intptr_t> stdipt_map;
+static std::unordered_map<CPROCID, std::string> stdopt_map;
+static std::unordered_map<CPROCID, bool> complete_map;
+static std::mutex stdopt_mutex;
+
+static inline const char *executed_process_read_from_standard_output(CPROCID proc_index) {
+  if (stdopt_map.find(proc_index) == stdopt_map.end()) return "\0";
+  std::lock_guard<std::mutex> guard(stdopt_mutex);
+  return stdopt_map.find(proc_index)->second.c_str();
 }
 
-static pid_t PidFromWid(Display *display, Window window) {
-  return (pid_t)GetActiveWidOrWindowPid(display, window, false);
+static inline void free_executed_process_standard_input(CPROCID proc_index) {
+  if (stdipt_map.find(proc_index) == stdipt_map.end()) return;
+  stdipt_map.erase(proc_index);
 }
 
-// create dialog process
-static pid_t ProcessCreate(const char *command, int *infp, int *outfp) {
+static inline void free_executed_process_standard_output(CPROCID proc_index) {
+  if (stdopt_map.find(proc_index) == stdopt_map.end()) return;
+  stdopt_map.erase(proc_index);
+}
+
+static inline bool completion_status_from_executed_process(CPROCID proc_index) {
+  if (complete_map.find(proc_index) == complete_map.end()) return false;
+  return complete_map.find(proc_index)->second;
+}
+
+static inline XPROCID process_execute_helper(const char *command, int *infp, int *outfp) {
   int p_stdin[2];
   int p_stdout[2];
-  pid_t pid;
+  XPROCID pid = -1;
   if (pipe(p_stdin) == -1)
     return -1;
   if (pipe(p_stdout) == -1) {
@@ -307,121 +294,100 @@ static pid_t ProcessCreate(const char *command, int *infp, int *outfp) {
   return pid;
 }
 
-#if defined(__APPLE__) && defined(__MACH__)
-static void PpidFromPid(pid_t procId, pid_t *parentProcId) {
-  proc_bsdinfo proc_info;
-  if (proc_pidinfo(procId, PROC_PIDTBSDINFO, 0, &proc_info, sizeof(proc_info)) > 0) {
-    *parentProcId = proc_info.pbi_ppid;
+static inline void output_thread(std::intptr_t file, CPROCID proc_index) {
+  ssize_t nRead = 0; char buffer[BUFSIZ];
+  while ((nRead = read((int)file, buffer, BUFSIZ)) > 0) {
+    buffer[nRead] = '\0';
+    std::lock_guard<std::mutex> guard(stdopt_mutex);
+    stdopt_map[proc_index].append(buffer, nRead);
   }
 }
-#endif
 
-static std::vector<pid_t> PidFromPpid(pid_t parentProcId) {
-  std::vector<pid_t> vec;
-  #if defined(__APPLE__) && defined(__MACH__)
-  int cntp = proc_listpids(PROC_ALL_PIDS, 0, nullptr, 0);
-  std::vector<pid_t> proc_info(cntp);
-  std::fill(proc_info.begin(), proc_info.end(), 0);
-  proc_listpids(PROC_ALL_PIDS, 0, &proc_info[0], sizeof(pid_t) * cntp);
-  for (int i = cntp; i > 0; i--) {
-    if (proc_info[i] == 0) { continue; }
-    pid_t ppid; PpidFromPid(proc_info[i], &ppid);
-    if (ppid == parentProcId) {
-      vec.push_back(proc_info[i]);
-    }
-  }
-  #elif defined(__linux__) && !defined(__ANDROID__)
-  PROCTAB *proc = openproc(PROC_FILLSTAT);
-  while (proc_t *proc_info = readproc(proc, nullptr)) {
-    if (proc_info->ppid == parentProcId) {
-      vec.push_back(proc_info->tgid);
-    }
-    freeproc(proc_info);
-  }
-  closeproc(proc);
-  #elif defined(__FreeBSD__)
-  int cntp; if (kinfo_proc *proc_info = kinfo_getallproc(&cntp)) {
-    for (int i = 0; i < cntp; i++) {
-      if (proc_info[i].ki_ppid == parentProcId) {
-        vec.push_back(proc_info[i].ki_pid);
-      }
-    }
-    free(proc_info);
-  }
-  #elif defined(__DragonFly__)
-  char errbuf[_POSIX2_LINE_MAX];
-  static kvm_t *kd = nullptr; kinfo_proc *proc_info = nullptr; 
-  const char *nlistf, *memf; nlistf = memf = "/dev/null";
-  kd = kvm_openfiles(nlistf, memf, NULL, O_RDONLY, errbuf); if (!kd) return vec;
-  int cntp = 0; if ((proc_info = kvm_getprocs(kd, KERN_PROC_ALL, 0, &cntp))) {
-    for (int i = 0; i < cntp; i++) {
-      if (proc_info[i].kp_pid >= 0 && proc_info[i].kp_ppid >= 0 && 
-        proc_info[i].kp_ppid == parentProcId) {
-        vec.push_back(proc_info[i].kp_pid);
-      }
-    }
-  }
-  kvm_close(kd);
-  #elif defined(__OpenBSD__)
-  char errbuf[_POSIX2_LINE_MAX];
-  static kvm_t *kd = nullptr; kinfo_proc *proc_info = nullptr; int cntp = 0;
-  kd = kvm_openfiles(nullptr, nullptr, nullptr, KVM_NO_FILES, errbuf); if (!kd) return vec;
-  if ((proc_info = kvm_getprocs(kd, KERN_PROC_ALL, 0, sizeof(struct kinfo_proc), &cntp))) {
-    for (int i = cntp - 1; i >= 0; i--) {
-      if (proc_info[i].p_pid >= 0 && proc_info[i].p_ppid >= 0 &&
-        proc_info[i].p_ppid == parent_proc_id) {
-        vec.push_back(proc_info[i].p_pid);
-      }
-    }
-  }
-  kvm_close(kd);
-  #endif
-  return vec;
+static inline XPROCID proc_id_from_fork_proc_id(XPROCID proc_id) {
+  XPROCID *pid = nullptr; int pidsize = 0;
+  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  ngs::cproc::proc_id_from_parent_proc_id(proc_id, &pid, &pidsize);
+  if (pid) { if (pidsize) { proc_id = pid[pidsize - 1]; }
+  ngs::cproc::free_proc_id(pid); }
+  return proc_id;
 }
 
-static pid_t PidFromPpidRecursive(pid_t parentProcId) {
-  std::vector<pid_t> pidVec = PidFromPpid(parentProcId);
-  if (pidVec.size()) {
-    parentProcId = PidFromPpidRecursive(pidVec[0]);
-  }
-  return parentProcId;
+static inline CPROCID process_execute(const char *command) {
+  index++;
+  int infd = 0, outfd = 0;
+  XPROCID proc_id = 0, fork_proc_id = 0, wait_proc_id = 0;
+  fork_proc_id = process_execute_helper(command, &infd, &outfd);
+  proc_id = fork_proc_id; wait_proc_id = proc_id;
+  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  if (fork_proc_id != -1) {
+    while ((proc_id = proc_id_from_fork_proc_id(proc_id)) == wait_proc_id) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+      int status; wait_proc_id = waitpid(fork_proc_id, &status, WNOHANG);
+      char **cmd = nullptr; int cmdsize; ngs::cproc::cmdline_from_proc_id(fork_proc_id, &cmd, &cmdsize);
+      if (cmd) { if (cmdsize && strcmp(cmd[0], "/bin/sh") == 0) {
+      if (wait_proc_id > 0) proc_id = wait_proc_id; } ngs::cproc::free_cmdline(cmd); }
+    }
+  } else { proc_id = 0; }
+  child_proc_id[index] = proc_id; std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  proc_did_execute[index] = true; CPROCID proc_index = (CPROCID)proc_id;
+  stdipt_map.insert(std::make_pair(proc_index, (std::intptr_t)infd));
+  std::thread opt_thread(output_thread, (std::intptr_t)outfd, proc_index);
+  opt_thread.join();
+  free_executed_process_standard_input(proc_index);
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  complete_map[proc_index] = true;
+  return proc_index;
 }
 
-static void *modify_shell_dialog(void *pid) {
-  SetErrorHandlers();
-  Display *display = XOpenDisplay(nullptr); Window wid;
-  pid_t child = PidFromPpidRecursive((pid_t)(std::intptr_t)pid);
-  while (true) {
+static inline CPROCID process_execute_async(const char *command) {
+  int prevIndex = index;
+  std::thread proc_thread(process_execute, command);
+  while (prevIndex == index) {
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    wid = WidFromTop(display);
-    if (PidFromWid(display, wid) == child) {
-      break;
-    }
   }
-  if (file_exists(current_icon)) XSetIcon(display, wid, current_icon.c_str());
-  XSetTransientForHint(display, wid, (Window)(std::intptr_t)owner);
-  int len = caption.length() + 1; char *buffer = new char[len]();
-  strcpy(buffer, caption.c_str()); XChangeProperty(display, wid,
+  while (proc_did_execute.find(index) == proc_did_execute.end() || !proc_did_execute[index]) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  }
+  CPROCID proc_index = (CPROCID)child_proc_id[index];
+  complete_map[proc_index] = false;
+  proc_thread.detach();
+  return proc_index;
+}
+
+// set dialog transient; set title caption.
+static inline void modify_shell_dialog(XPROCID pid) {
+  SetErrorHandlers(); int sz = 0;
+  WINDOWID *arr = nullptr; Window wid = 0;
+  Display *display = XOpenDisplay(nullptr);
+  ngs::cproc::window_id_from_proc_id(pid, &arr, &sz);
+  for (int i = 0; i < sz; i++) {
+    wid = (Window)ngs::cproc::native_window_from_window_id(arr[i]);
+    XSetIcon(display, wid, widget_get_icon());
+  }
+  XSetTransientForHint(display, wid, (Window)(std::intptr_t)strtoul(widget_get_owner(), nullptr, 10));
+  int len = strlen(widget_get_caption()) + 1; char *buffer = new char[len]();
+  strcpy(buffer, widget_get_caption()); XChangeProperty(display, wid,
   XInternAtom(display, "_NET_WM_NAME", false),
   XInternAtom(display, "UTF8_STRING", false),
   8, PropModeReplace, (unsigned char *)buffer, len);
-  delete[] buffer; XCloseDisplay(display);
-  return nullptr;
+  delete[] buffer;
+  ngs::cproc::free_window_id(arr);
+  XCloseDisplay(display);
 }
 
 string create_shell_dialog(string command) {
-  string output; char buffer[BUFSIZ];
-  int outfp = 0, infp = 0; ssize_t nRead = 0;
-  pid_t pid = ProcessCreate(command.c_str(), &infp, &outfp);
-  std::this_thread::sleep_for(std::chrono::milliseconds(100)); pthread_t thread;
-  pthread_create(&thread, nullptr, modify_shell_dialog, (void *)(std::intptr_t)pid);
-  while ((nRead = read(outfp, buffer, BUFSIZ)) > 0) {
-    buffer[nRead] = '\0';
-    output.append(buffer, nRead);
+  string output;
+  XPROCID pid = process_execute_async(command.c_str());
+  if (pid) {
+    while (!completion_status_from_executed_process(pid)) {
+      modify_shell_dialog(pid); std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    output = executed_process_read_from_standard_output(pid);
+    free_executed_process_standard_output(pid);
+    while (!output.empty() && (output.back() == '\r' || output.back() == '\n')) {
+      output.pop_back();
+    }
   }
-  pthread_cancel(thread);
-  while (!output.empty() && (output.back() == '\r' || output.back() == '\n'))
-    output.pop_back();
   return output;
 }
 
@@ -779,37 +745,31 @@ char *get_open_filename(char *filter, char *fname) {
 char *get_open_filename_ext(char *filter, char *fname, char *dir, char *title) {
   change_relative_to_kwin();
   string str_command; string pwd;
-  string str_title = add_escaping(title, true, "Open");
   string caption_previous = caption;
-  caption = (str_title == "Open") ? "Open" : title;
-  string str_fname = filename_name(filename_absolute(fname));
-  string str_dir = filename_absolute(dir);
-  string str_iconflag = (dm_dialogengine == dm_zenity) ? " --window-icon=\"" : " --icon \"";
-  if (current_icon == "") current_icon = filename_absolute("assets/icon.png");
-  string str_icon = file_exists(current_icon) ? str_iconflag + add_escaping(current_icon, false, "") + string("\"") : "";
-  string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
-
   if (dm_dialogengine == dm_zenity) {
+    string str_title = add_escaping(title, true, "Open");
+    string str_fname = filename_name(filename_absolute(fname));
+    string str_dir = filename_absolute(dir);
+    string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
     str_command = string("ans=$(zenity ") +
     string("--file-selection --title=\"") + str_title + string("\" --filename=\"") +
-    add_escaping(str_path, false, "") + string("\"") + zenity_filter(filter) + str_icon + string(");echo $ans");
-  }
-  else if (dm_dialogengine == dm_kdialog) {
+    add_escaping(str_path, false, "") + string("\"") + zenity_filter(filter) + string(");echo $ans");
+  } else if (dm_dialogengine == dm_kdialog) {
+    string str_title = add_escaping(title, true, "Open");
+    string str_fname = filename_name(filename_absolute(fname));
+    string str_dir = filename_absolute(dir);
+    string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
     if (str_dir.empty()) pwd = string("\"$HOME/") + add_escaping(str_fname, false, "") + string("\"");
     else pwd = string("\"") + add_escaping(str_path, false, "") + string("\"");
-
     str_command = string("ans=$(kdialog ") +
     string("--getopenfilename ") + pwd + kdialog_filter(filter) +
-    string(" --title \"") + str_title + string("\"") + str_icon + string(");echo $ans");
+    string(" --title \"") + str_title + string("\"") + string(");echo $ans");
   }
-
   static string result;
   result = create_shell_dialog(str_command);
   caption = caption_previous;
-
   if (file_exists(result))
     return (char *)result.c_str();
-
   return (char *)"";
 }
 
@@ -820,44 +780,37 @@ char *get_open_filenames(char *filter, char *fname) {
 char *get_open_filenames_ext(char *filter, char *fname, char *dir, char *title) {
   change_relative_to_kwin();
   string str_command; string pwd;
-  string str_title = add_escaping(title, true, "Open");
   string caption_previous = caption;
-  caption = (str_title == "Open") ? "Open" : title;
-  string str_fname = filename_name(filename_absolute(fname));
-  string str_dir = filename_absolute(dir);
-  string str_iconflag = (dm_dialogengine == dm_zenity) ? " --window-icon=\"" : " --icon \"";
-  if (current_icon == "") current_icon = filename_absolute("assets/icon.png");
-  string str_icon = file_exists(current_icon) ? str_iconflag + add_escaping(current_icon, false, "") + string("\"") : "";
-  string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
-
   if (dm_dialogengine == dm_zenity) {
+    string str_title = add_escaping(title, true, "Open");
+    string str_fname = filename_name(filename_absolute(fname));
+    string str_dir = filename_absolute(dir);
+    string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
     str_command = string("zenity ") +
     string("--file-selection --multiple --separator='\n' --title=\"") + str_title + string("\" --filename=\"") +
-    add_escaping(str_path, false, "") + string("\"") + zenity_filter(filter) + str_icon;
-  }
-  else if (dm_dialogengine == dm_kdialog) {
+    add_escaping(str_path, false, "") + string("\"") + zenity_filter(filter);
+  } else if (dm_dialogengine == dm_kdialog) {
+    string str_title = add_escaping(title, true, "Open");
+    string str_fname = filename_name(filename_absolute(fname));
+    string str_dir = filename_absolute(dir);
+    string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
     if (str_dir.empty()) pwd = string("\"$HOME/") + add_escaping(str_fname, false, "") + string("\"");
     else pwd = string("\"") + add_escaping(str_path, false, "") + string("\"");
-
     str_command = string("kdialog ") +
     string("--getopenfilename ") + pwd + kdialog_filter(filter) +
-    string(" --multiple --separate-output --title \"") + str_title + string("\"") + str_icon;
+    string(" --multiple --separate-output --title \"") + str_title + string("\"");
   }
-
   static string result;
   result = create_shell_dialog(str_command);
   caption = caption_previous;
   std::vector<string> stringVec = string_split(result, '\n');
-
   bool success = true;
   for (const string &str : stringVec) {
     if (!file_exists(str))
       success = false;
   }
-
   if (success)
     return (char *)result.c_str();
-
   return (char *)"";
 }
 
@@ -868,30 +821,26 @@ char *get_save_filename(char *filter, char *fname) {
 char *get_save_filename_ext(char *filter, char *fname, char *dir, char *title) {
   change_relative_to_kwin();
   string str_command; string pwd;
-  string str_title = add_escaping(title, true, "Save As");
   string caption_previous = caption;
-  caption = (str_title == "Save As") ? "Save As" : title;
-  string str_fname = filename_name(filename_absolute(fname));
-  string str_dir = filename_absolute(dir);
-  string str_iconflag = (dm_dialogengine == dm_zenity) ? " --window-icon=\"" : " --icon \"";
-  if (current_icon == "") current_icon = filename_absolute("assets/icon.png");
-  string str_icon = file_exists(current_icon) ? str_iconflag + add_escaping(current_icon, false, "") + string("\"") : "";
-  string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
-
   if (dm_dialogengine == dm_zenity) {
+    string str_title = add_escaping(title, true, "Save As");
+    string str_fname = filename_name(filename_absolute(fname));
+    string str_dir = filename_absolute(dir);
+    string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
     str_command = string("ans=$(zenity ") +
     string("--file-selection  --save --confirm-overwrite --title=\"") + str_title + string("\" --filename=\"") +
-    add_escaping(str_path, false, "") + string("\"") + zenity_filter(filter) + str_icon + string(");echo $ans");
-  }
-  else if (dm_dialogengine == dm_kdialog) {
+    add_escaping(str_path, false, "") + string("\"") + zenity_filter(filter) + string(");echo $ans");
+  } else if (dm_dialogengine == dm_kdialog) {
+    string str_title = add_escaping(title, true, "Save As");
+    string str_fname = filename_name(filename_absolute(fname));
+    string str_dir = filename_absolute(dir);
+    string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
     if (str_dir.empty()) pwd = string("\"$HOME/") + add_escaping(str_fname, false, "") + string("\"");
     else pwd = string("\"") + add_escaping(str_path, false, "") + string("\"");
-
     str_command = string("ans=$(kdialog ") +
     string("--getsavefilename ") + pwd + kdialog_filter(filter) +
-    string(" --title \"") + str_title + string("\"") + str_icon + string(");echo $ans");
+    string(" --title \"") + str_title + string("\"") + string(");echo $ans");
   }
-
   static string result;
   result = create_shell_dialog(str_command);
   caption = caption_previous;
@@ -905,28 +854,22 @@ char *get_directory(char *dname) {
 char *get_directory_alt(char *capt, char *root) {
   change_relative_to_kwin();
   string str_command; string pwd;
-  string str_title = add_escaping(capt, true, "Select Directory");
   string caption_previous = caption;
-  caption = (str_title == "Select Directory") ? "Select Directory" : capt;
-  string str_dname = root;
-  string str_iconflag = (dm_dialogengine == dm_zenity) ? " --window-icon=\"" : " --icon \"";
-  if (current_icon == "") current_icon = filename_absolute("assets/icon.png");
-  string str_icon = file_exists(current_icon) ? str_iconflag + add_escaping(current_icon, false, "") + string("\"") : "";
-  string str_end = ");if [ $ans = / ] ;then echo $ans;elif [ $? = 1 ] ;then echo $ans/;else echo $ans;fi";
-
   if (dm_dialogengine == dm_zenity) {
+    string str_title = add_escaping(capt, true, "Select Directory");
+    string str_dname = root;
+    string str_end = ");if [ $ans = / ] ;then echo $ans;elif [ $? = 1 ] ;then echo $ans/;else echo $ans;fi";
     str_command = string("ans=$(zenity ") +
     string("--file-selection --directory --title=\"") + str_title + string("\" --filename=\"") +
-    add_escaping(str_dname, false, "") + string("\"") + str_icon + str_end;
-  }
-  else if (dm_dialogengine == dm_kdialog) {
-    if (str_dname.empty() || str_dname[0] != '/') pwd = string("\"$HOME/\""); 
+    add_escaping(str_dname, false, "") + string("\"") + str_end;
+  } else if (dm_dialogengine == dm_kdialog) {
+    string str_title = add_escaping(capt, true, "Select Directory");
+    string str_dname = root;
+    if (str_dname.empty() || str_dname[0] != '/') pwd = string("\"$HOME/\"");
     else pwd = string("\"") + add_escaping(str_dname, false, "") + string("\"");
-
     str_command = string("ans=$(kdialog ") +
-    string("--getexistingdirectory ") + pwd + string(" --title \"") + str_title + string("\"") + str_icon + str_end;
+    string("--getexistingdirectory ") + pwd + string(" --title \"") + str_title + string("\"");
   }
-
   static string result;
   result = create_shell_dialog(str_command);
   caption = caption_previous;
