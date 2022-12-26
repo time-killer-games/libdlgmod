@@ -73,6 +73,7 @@ int dm_dialogengine  = -1;
 void *owner = nullptr;
 string caption;
 string current_icon;
+bool modifyInit = false;
 
 enum BUTTON_TYPES {
   BUTTON_ABORT,
@@ -364,19 +365,24 @@ static inline void modify_shell_dialog(XPROCID pid) {
   for (int i = 0; i < sz; i++) {
     wid = (Window)ngs::cproc::native_window_from_window_id(arr[i]);
     XSetIcon(display, wid, widget_get_icon());
+    XSetTransientForHint(display, wid, (Window)(std::intptr_t)strtoul(widget_get_owner(), nullptr, 10));
+    int len = strlen(widget_get_caption()) + 1; char *buffer = new char[len]();
+    strcpy(buffer, widget_get_caption()); XChangeProperty(display, wid,
+    XInternAtom(display, "_NET_WM_NAME", false),
+    XInternAtom(display, "UTF8_STRING", false),
+    8, PropModeReplace, (unsigned char *)buffer, len);
+    delete[] buffer; Window focus; int revert; while (!modifyInit) { 
+    XSynchronize(display, true); XRaiseWindow(display, wid);
+    XSetInputFocus(display, wid, RevertToParent, CurrentTime);
+    XFlush(display); XGetInputFocus(display, &focus, &revert);
+    if (wid == focus) modifyInit = true; }
   }
-  XSetTransientForHint(display, wid, (Window)(std::intptr_t)strtoul(widget_get_owner(), nullptr, 10));
-  int len = strlen(widget_get_caption()) + 1; char *buffer = new char[len]();
-  strcpy(buffer, widget_get_caption()); XChangeProperty(display, wid,
-  XInternAtom(display, "_NET_WM_NAME", false),
-  XInternAtom(display, "UTF8_STRING", false),
-  8, PropModeReplace, (unsigned char *)buffer, len);
-  delete[] buffer; ngs::cproc::free_window_id(arr);
+  ngs::cproc::free_window_id(arr);
   XCloseDisplay(display);
 }
 
 string create_shell_dialog(string command) {
-  string output;
+  string output; modifyInit = false;
   XPROCID pid = process_execute_async(command.c_str());
   if (pid) {
     while (!completion_status_from_executed_process(pid)) {
