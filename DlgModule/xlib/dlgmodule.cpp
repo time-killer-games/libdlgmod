@@ -362,7 +362,8 @@ static inline void modify_shell_dialog(XPROCID pid) {
   ngs::cproc::window_id_from_proc_id(pid, &arr, &sz);
   for (int i = 0; i < sz; i++) {
     wid = (Window)ngs::cproc::native_window_from_window_id(arr[i]);
-    XSetIcon(display, wid, widget_get_icon());
+    XSetIcon(display, wid, widget_get_icon()); XRaiseWindow(display, wid);
+    XSetInputFocus(display, wid, RevertToPointerRoot, CurrentTime);
   }
   XSetTransientForHint(display, wid, (Window)(std::intptr_t)strtoul(widget_get_owner(), nullptr, 10));
   int len = strlen(widget_get_caption()) + 1; char *buffer = new char[len]();
@@ -370,8 +371,7 @@ static inline void modify_shell_dialog(XPROCID pid) {
   XInternAtom(display, "_NET_WM_NAME", false),
   XInternAtom(display, "UTF8_STRING", false),
   8, PropModeReplace, (unsigned char *)buffer, len);
-  delete[] buffer; XRaiseWindow(display, wid);
-  XSetInputFocus(display, wid, RevertToPointerRoot, CurrentTime);
+  delete[] buffer;
   ngs::cproc::free_window_id(arr);
   XCloseDisplay(display);
 }
