@@ -86,7 +86,7 @@ enum BUTTON_TYPES {
 int const btn_array_len = 7;
 string btn_array[btn_array_len] = { "Abort", "Ignore", "OK", "Cancel", "Yes", "No", "Retry" };
 
-bool modifyInit      = false;
+int modifyInit = 0;
 
 bool message_cancel  = false;
 bool question_cancel = false;
@@ -372,15 +372,16 @@ static inline void modify_shell_dialog(XPROCID pid) {
   XInternAtom(display, "_NET_WM_NAME", false),
   XInternAtom(display, "UTF8_STRING", false),
   8, PropModeReplace, (unsigned char *)buffer, len);
-  delete[] buffer; if (!modifyInit) { XRaiseWindow(display, wid);
+  delete[] buffer; if (modifyInit < 20) {
+  XSynchronize(display, true); XRaiseWindow(display, wid);
   XSetInputFocus(display, wid, RevertToPointerRoot, CurrentTime);
-  modifyInit = true; }
+  XFlush(display); modifyInit++; }
   ngs::cproc::free_window_id(arr);
   XCloseDisplay(display);
 }
 
 string create_shell_dialog(string command) {
-  string output; modifyInit = false;
+  string output; modifyInit = 0;
   XPROCID pid = process_execute_async(command.c_str());
   if (pid) {
     while (!completion_status_from_executed_process(pid)) {
