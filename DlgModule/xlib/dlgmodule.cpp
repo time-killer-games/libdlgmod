@@ -86,12 +86,14 @@ enum BUTTON_TYPES {
 int const btn_array_len = 7;
 string btn_array[btn_array_len] = { "Abort", "Ignore", "OK", "Cancel", "Yes", "No", "Retry" };
 
+bool modifyInit      = false;
+
 bool message_cancel  = false;
 bool question_cancel = false;
 
 bool dialog_position = false;
 bool dialog_size     = false;
-
+ 
 int      dialog_xpos   = 0;
 int      dialog_ypos   = 0;
 unsigned dialog_width  = 0;
@@ -362,8 +364,7 @@ static inline void modify_shell_dialog(XPROCID pid) {
   ngs::cproc::window_id_from_proc_id(pid, &arr, &sz);
   for (int i = 0; i < sz; i++) {
     wid = (Window)ngs::cproc::native_window_from_window_id(arr[i]);
-    XSetIcon(display, wid, widget_get_icon()); XRaiseWindow(display, wid);
-    XSetInputFocus(display, wid, RevertToPointerRoot, CurrentTime);
+    XSetIcon(display, wid, widget_get_icon());
   }
   XSetTransientForHint(display, wid, (Window)(std::intptr_t)strtoul(widget_get_owner(), nullptr, 10));
   int len = strlen(widget_get_caption()) + 1; char *buffer = new char[len]();
@@ -371,13 +372,15 @@ static inline void modify_shell_dialog(XPROCID pid) {
   XInternAtom(display, "_NET_WM_NAME", false),
   XInternAtom(display, "UTF8_STRING", false),
   8, PropModeReplace, (unsigned char *)buffer, len);
-  delete[] buffer;
+  delete[] buffer; if (!modifyInit) { XRaiseWindow(display, wid);
+  XSetInputFocus(display, wid, RevertToPointerRoot, CurrentTime);
+  modifyInit = true; }
   ngs::cproc::free_window_id(arr);
   XCloseDisplay(display);
 }
 
 string create_shell_dialog(string command) {
-  string output;
+  string output; modifyInit = false;
   XPROCID pid = process_execute_async(command.c_str());
   if (pid) {
     while (!completion_status_from_executed_process(pid)) {
