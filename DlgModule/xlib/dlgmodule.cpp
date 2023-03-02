@@ -362,22 +362,20 @@ static inline void modify_shell_dialog(XPROCID pid) {
   WINDOWID *arr = nullptr; Window wid = 0;
   Display *display = XOpenDisplay(nullptr);
   ngs::cproc::window_id_from_proc_id(pid, &arr, &sz);
-  for (int i = 0; i < sz; i++) {
-    wid = (Window)ngs::cproc::native_window_from_window_id(arr[i]);
-    XSetIcon(display, wid, widget_get_icon());
-    XSetTransientForHint(display, wid, (Window)(std::intptr_t)strtoul(widget_get_owner(), nullptr, 10));
-    int len = strlen(widget_get_caption()) + 1; char *buffer = new char[len]();
-    strcpy(buffer, widget_get_caption()); XChangeProperty(display, wid,
-    XInternAtom(display, "_NET_WM_NAME", false),
-    XInternAtom(display, "UTF8_STRING", false),
-    8, PropModeReplace, (unsigned char *)buffer, len);
-    delete[] buffer; Window focus; int revert; while (!modifyInit) { 
-    XSynchronize(display, true); XRaiseWindow(display, wid);
-    XSetInputFocus(display, wid, RevertToParent, CurrentTime);
-    XFlush(display); XGetInputFocus(display, &focus, &revert);
-    if (wid == focus) modifyInit = true; }
-  }
-  ngs::cproc::free_window_id(arr);
+  if (sz) { wid = (Window)ngs::cproc::native_window_from_window_id(arr[sz - 1]);
+  XSetIcon(display, wid, widget_get_icon());
+  XSetTransientForHint(display, wid, (Window)(std::intptr_t)strtoul(widget_get_owner(), nullptr, 10));
+  int len = strlen(widget_get_caption()) + 1; char *buffer = new char[len]();
+  strcpy(buffer, widget_get_caption()); XChangeProperty(display, wid,
+  XInternAtom(display, "_NET_WM_NAME", false),
+  XInternAtom(display, "UTF8_STRING", false),
+  8, PropModeReplace, (unsigned char *)buffer, len);
+  delete[] buffer; Window focus; int revert; while (!modifyInit) { 
+  XSynchronize(display, true); XRaiseWindow(display, wid);
+  XSetInputFocus(display, wid, RevertToParent, CurrentTime);
+  XFlush(display); XGetInputFocus(display, &focus, &revert);
+  if (wid == focus) modifyInit = true; }
+  ngs::cproc::free_window_id(arr); }
   XCloseDisplay(display);
 }
 
