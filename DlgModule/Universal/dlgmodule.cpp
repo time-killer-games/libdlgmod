@@ -179,8 +179,8 @@ void get_integer_threaded(char *str, double def, unsigned id) {
   double result = get_integer(str, def);
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
-  DsMapAddDouble(resultMap, (char *)"status", 1);
-  DsMapAddDouble(resultMap, (char *)"value", result);
+  DsMapAddDouble(resultMap, (char *)"status", isnan(result) ? 0 : 1);
+  DsMapAddDouble(resultMap, (char *)"value", isnan(result) ? 0 : result);
   CreateAsynEventWithDSMap(resultMap, 63);
   enable_dialog_creation = true;
 }

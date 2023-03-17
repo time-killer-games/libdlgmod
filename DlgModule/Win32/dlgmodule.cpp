@@ -636,12 +636,18 @@ namespace dialog_module {
       if (def > DIGITS_MAX) def = DIGITS_MAX;
 
       string cpp_tdef = remove_trailing_zeros(def);
-      double result = strtod(get_string_helper(str, (char *)cpp_tdef.c_str(), hide), nullptr);
+      char* stringResult = get_string_helper(str, (char*)cpp_tdef.c_str(), hide);
+      if (stringResult[0] != '\0')
+      {
+          double result = strtod(stringResult, nullptr);
 
-      if (result < DIGITS_MIN) result = DIGITS_MIN;
-      if (result > DIGITS_MAX) result = DIGITS_MAX;
+          if (result < DIGITS_MIN) result = DIGITS_MIN;
+          if (result > DIGITS_MAX) result = DIGITS_MAX;
 
-      return result;
+          return result;
+      }
+      else
+          return nan(""); // User clicked cancel or didn't enter any number.
     }
     #endif
 
