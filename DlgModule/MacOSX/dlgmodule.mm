@@ -625,18 +625,18 @@ namespace dialog_module {
 
     string str_str = str;
     string str_def = remove_trailing_zeros(def);
-	char* stringResult = cocoa_input_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption == "") ? "Input Query" : caption.c_str(), true);
-	if (stringResult[0] != '\0')
-	{
-		double result = strtod(stringResult, nullptr);
+    const char* stringResult = cocoa_input_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption == "") ? "Input Query" : caption.c_str(), true);
+    if (stringResult[0] != '\0')
+    {
+        double result = strtod(stringResult, nullptr);
 
-		if (result < DIGITS_MIN) result = DIGITS_MIN;
-		if (result > DIGITS_MAX) result = DIGITS_MAX;
+        if (result < DIGITS_MIN) result = DIGITS_MIN;
+        if (result > DIGITS_MAX) result = DIGITS_MAX;
 
-		return result;
-	}
-	else
-		return nan(""); // User clicked cancel or didn't enter any number.
+        return result;
+    }
+    else
+        return nan(""); // User clicked cancel or didn't enter any number.
   }
   
   double get_passcode(char *str, double def) {
