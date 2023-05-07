@@ -40,7 +40,7 @@
 #else
 #include "../Universal/dlgmodule.h"
 #endif
-#include "filedialogs.h"
+#include "filedialogs.hpp"
 #include "config.h"
 
 #include <sys/stat.h>
