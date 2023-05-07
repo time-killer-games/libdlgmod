@@ -85,6 +85,7 @@ EXPORTED_FUNCTION char *widget_get_system();
 EXPORTED_FUNCTION double widget_set_system(char *sys);
 EXPORTED_FUNCTION char *widget_get_button_name(double type);
 EXPORTED_FUNCTION double widget_set_button_name(double type, char *name);
+EXPORTED_FUNCTION double widget_get_canceled();
 EXPORTED_FUNCTION void RegisterCallbacks(char *arg1, char *arg2, char *arg3, char *arg4);
 
 namespace {
@@ -674,6 +675,10 @@ char *widget_get_button_name(double type) {
 double widget_set_button_name(double type, char *name) {
   dialog_module::widget_set_button_name((int)type, name);
   return 0;
+}
+
+double widget_get_canceled() {
+  return dialog_module::widget_get_canceled();
 }
 
 void RegisterCallbacks(char *arg1, char *arg2, char *arg3, char *arg4) {

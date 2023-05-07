@@ -88,6 +88,7 @@ namespace dialog_module {
 
     // file dialogs
     OPENFILENAMEW ofn; 
+    bool cancel_pressed = false;
     wchar_t *wstr_filter = nullptr;
     wchar_t wstr_fname[32767];
     wstring cpp_wstr_dir;
@@ -269,6 +270,7 @@ namespace dialog_module {
 
     UINT_PTR CALLBACK GetColorProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam) {
       if (uiMsg == WM_INITDIALOG) {
+        cancel_pressed = false;
         if (tstr_gctitle != "")
           SetWindowTextW(hdlg, cpp_wstr_gctitle.c_str());
         PostMessageW(hdlg, WM_SETFOCUS, 0, 0);
@@ -287,7 +289,18 @@ namespace dialog_module {
         if (win == GetDesktopWindow() ||
           (win != (HWND)wParam && cbtcr->lpcs->hwndParent == win)) {
           dlg = (HWND)wParam;
+          cancel_pressed = false;
           init = true;
+        }
+      }
+
+      if (nCode == HCBT_SETFOCUS) {
+        POINT pt;
+        if (GetCursorPos(&pt) && ScreenToClient(dlg, &pt) && 
+          GetDlgItem(dlg, 2) == ChildWindowFromPoint(dlg, pt)) {
+          cancel_pressed = true;
+        } else {
+          cancel_pressed = false;
         }
       }
 
@@ -327,6 +340,7 @@ namespace dialog_module {
       if (nCode < HC_ACTION)
         return CallNextHookEx(hhook, nCode, wParam, lParam);
       if (nCode == HCBT_CREATEWND) {
+        cancel_pressed = false;
         CBT_CREATEWNDW *cbtcr = (CBT_CREATEWNDW *)lParam;
         if (win == GetDesktopWindow() ||
           (win != (HWND)wParam && cbtcr->lpcs->hwndParent == win)) {
@@ -377,6 +391,7 @@ namespace dialog_module {
       if (nCode < HC_ACTION)
         return CallNextHookEx(hhook, nCode, wParam, lParam);
       if (nCode == HCBT_CREATEWND) {
+        cancel_pressed = false;
         CBT_CREATEWNDW *cbtcr = (CBT_CREATEWNDW *)lParam;
         if (win == GetDesktopWindow() ||
           (win != (HWND)wParam && cbtcr->lpcs->hwndParent == win)) {
@@ -422,6 +437,7 @@ namespace dialog_module {
         return CallNextHookEx(hhook, nCode, wParam, lParam);
 
       if (nCode == HCBT_CREATEWND) {
+        cancel_pressed = false;
         CBT_CREATEWNDW *cbtcr = (CBT_CREATEWNDW *)lParam;
         if (win == GetDesktopWindow() ||
           (win != (HWND)wParam && cbtcr->lpcs->hwndParent == win)) {
@@ -1046,6 +1062,10 @@ namespace dialog_module {
 
   char *widget_get_button_name(int type) {
     return (char *)btn_array[type].c_str();
+  }
+
+  bool widget_get_canceled() {
+    return cancel_pressed;
   }
 
 } // namespace dialog_module

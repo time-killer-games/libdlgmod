@@ -373,8 +373,8 @@ namespace ngs::xproc {
     #elif defined(__DragonFly__)
     int cntp = 0;
     kinfo_proc *proc_info = nullptr;
-    const char *nlistf = "/dev/null";
-    const char *memf   = "/dev/null";
+    const char *nlistf, *memf;
+    nlistf = memf = "/dev/null";
     kd = kvm_openfiles(nlistf, memf, nullptr, O_RDONLY, nullptr); 
     if (!kd) return vec;
     if ((proc_info = kvm_getprocs(kd, KERN_PROC_ALL, 0, &cntp))) {
@@ -424,15 +424,12 @@ namespace ngs::xproc {
   }
 
   bool proc_id_exists(PROCID proc_id) {
-    if (proc_id < 0) return false;
-    std::vector<PROCID> vec;
-    vec = proc_id_enum();
+    std::vector<PROCID> vec = proc_id_enum();
     auto itr = std::find(vec.begin(), vec.end(), proc_id);
     return (itr != vec.end());
   }
 
   bool proc_id_suspend(PROCID proc_id) {
-    if (proc_id < 0) return false;
     #if !defined(_WIN32)
     return (kill(proc_id, SIGSTOP) != -1);
     #else
@@ -452,7 +449,6 @@ namespace ngs::xproc {
   }
 
   bool proc_id_resume(PROCID proc_id) {
-    if (proc_id < 0) return false;
     #if !defined(_WIN32)
     return (kill(proc_id, SIGCONT) != -1);
     #else
@@ -472,7 +468,6 @@ namespace ngs::xproc {
   }
 
   bool proc_id_kill(PROCID proc_id) {
-    if (proc_id < 0) return false;
     #if !defined(_WIN32)
     return (kill(proc_id, SIGKILL) != -1);
     #else
@@ -484,9 +479,8 @@ namespace ngs::xproc {
     #endif
   }
 
-  std::vector<PROCID> parent_proc_id_from_proc_id(PROCID proc_id) { 
+  std::vector<PROCID> parent_proc_id_from_proc_id(PROCID proc_id) {
     std::vector<PROCID> vec;
-    if (proc_id < 0) return vec;
     #if defined(_WIN32)
     HANDLE hp = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (!hp) return vec;
@@ -541,8 +535,8 @@ namespace ngs::xproc {
     #elif defined(__DragonFly__)
     int cntp = 0;
     kinfo_proc *proc_info = nullptr;
-    const char *nlistf = "/dev/null";
-    const char *memf   = "/dev/null";
+    const char *nlistf, *memf;
+    nlistf = memf = "/dev/null";
     kd = kvm_openfiles(nlistf, memf, nullptr, O_RDONLY, nullptr); 
     if (!kd) return vec;
     if ((proc_info = kvm_getprocs(kd, KERN_PROC_PID, proc_id, &cntp))) {
@@ -587,7 +581,6 @@ namespace ngs::xproc {
 
   std::vector<PROCID> proc_id_from_parent_proc_id(PROCID parent_proc_id) {
     std::vector<PROCID> vec;
-    if (parent_proc_id < 0) return vec;
     #if defined(_WIN32)
     HANDLE hp = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (!hp) return vec;
@@ -636,8 +629,8 @@ namespace ngs::xproc {
     #elif defined(__DragonFly__)
     int cntp = 0;
     kinfo_proc *proc_info = nullptr;
-    const char *nlistf = "/dev/null";
-    const char *memf   = "/dev/null";
+    const char *nlistf, *memf;
+    nlistf = memf = "/dev/null";
     kd = kvm_openfiles(nlistf, memf, nullptr, O_RDONLY, nullptr);
     if (!kd) return vec;
     if ((proc_info = kvm_getprocs(kd, KERN_PROC_ALL, 0, &cntp))) {
@@ -698,8 +691,6 @@ namespace ngs::xproc {
   }
 
   std::vector<PROCID> proc_id_from_exe(std::string exe) {
-    std::vector<PROCID> vec;
-    if (exe.empty()) return vec;
     auto fnamecmp = [](std::string fname1, std::string fname2) {
       #if defined(_WIN32)
       std::size_t fp = fname2.find_last_of("\\/");
@@ -718,6 +709,7 @@ namespace ngs::xproc {
       if (abspath) return (fname1 == fname2 || fname1 == fname2.substr(0, fp));
       return (fname1 == fname2.substr(fp + 1));
     };
+    std::vector<PROCID> vec;
     std::vector<PROCID> proc_id = proc_id_enum();
     for (std::size_t i = 0; i < proc_id.size(); i++) {
       if (fnamecmp(exe, exe_from_proc_id(proc_id[i]))) {
@@ -728,12 +720,11 @@ namespace ngs::xproc {
   }
 
   std::vector<PROCID> proc_id_from_cwd(std::string cwd) {
-    std::vector<PROCID> vec;
-    if (cwd.empty()) return vec;
     auto fnamecmp = [](std::string fname1, std::string fname2) {
       if (fname1.empty() || fname2.empty()) return false;
       return (fname1 == fname2);
     };
+    std::vector<PROCID> vec;
     std::vector<PROCID> proc_id = proc_id_enum();
     for (std::size_t i = 0; i < proc_id.size(); i++) {
       if (fnamecmp(cwd, cwd_from_proc_id(proc_id[i]))) {
@@ -745,7 +736,6 @@ namespace ngs::xproc {
 
   std::string exe_from_proc_id(PROCID proc_id) {
     std::string path;
-    if (proc_id < 0) return path;
     #if defined(_WIN32)
     if (proc_id == GetCurrentProcessId()) {
       wchar_t buffer[MAX_PATH];
@@ -783,7 +773,7 @@ namespace ngs::xproc {
     }
     #elif defined(__FreeBSD__) || defined(__DragonFly__)
     int mib[4]; 
-    std::size_t len = 0;
+    std::size_t len;
     mib[0] = CTL_KERN;
     mib[1] = KERN_PROC;
     mib[2] = KERN_PROC_PATHNAME;
@@ -801,7 +791,7 @@ namespace ngs::xproc {
     }
     #elif defined(__NetBSD__)
     int mib[4]; 
-    std::size_t len = 0;
+    std::size_t len;
     mib[0] = CTL_KERN;
     mib[1] = KERN_PROC_ARGS;
     mib[2] = proc_id;
@@ -832,12 +822,10 @@ namespace ngs::xproc {
           if ((kif = kvm_getfiles(kd, KERN_FILE_BYPID, proc_id, sizeof(struct kinfo_file), &cntp))) {
             for (int i = 0; i < cntp; i++) {
               if (kif[i].fd_fd == KERN_FILE_TEXT) {
-                if (st.st_nlink == 1) {
-                  if (st.st_dev == (dev_t)kif[i].va_fsid || st.st_ino == (ino_t)kif[i].va_fileid) {
-                    *out = executable;
-                    success = true;
-                    break;
-                  }
+                if (st.st_dev == (dev_t)kif[i].va_fsid || st.st_ino == (ino_t)kif[i].va_fileid) {
+                  *out = executable;
+                  success = true;
+                  break;
                 }
               }
             }
@@ -902,7 +890,6 @@ namespace ngs::xproc {
 
   std::string cwd_from_proc_id(PROCID proc_id) {
     std::string path;
-    if (proc_id < 0) return path;
     #if defined(_WIN32)
     HANDLE proc = open_process_with_debug_privilege(proc_id);
     if (proc == nullptr) return path;
@@ -1020,7 +1007,6 @@ namespace ngs::xproc {
 
   std::vector<std::string> cmdline_from_proc_id(PROCID proc_id) {
     std::vector<std::string> vec;
-    if (proc_id < 0) return vec;
     #if defined(_WIN32)
     HANDLE proc = open_process_with_debug_privilege(proc_id);
     if (proc == nullptr) return vec;
@@ -1072,8 +1058,8 @@ namespace ngs::xproc {
     #elif defined(__DragonFly__)
     int cntp = 0;
     kinfo_proc *proc_info = nullptr;
-    const char *nlistf = "/dev/null";
-    const char *memf   = "/dev/null";
+    const char *nlistf, *memf;
+    nlistf = memf = "/dev/null";
     kd = kvm_openfiles(nlistf, memf, nullptr, O_RDONLY, nullptr);
     if (!kd) return vec;
     if ((proc_info = kvm_getprocs(kd, KERN_PROC_PID, proc_id, &cntp))) {
@@ -1136,7 +1122,6 @@ namespace ngs::xproc {
 
   std::vector<std::string> environ_from_proc_id(PROCID proc_id) {
     std::vector<std::string> vec;
-    if (proc_id < 0) return vec;
     #if defined(_WIN32)
     HANDLE proc = open_process_with_debug_privilege(proc_id);
     if (proc == nullptr) return vec;
@@ -1189,8 +1174,8 @@ namespace ngs::xproc {
     #elif defined(__DragonFly__)
     int cntp = 0;
     kinfo_proc *proc_info = nullptr;
-    const char *nlistf = "/dev/null";
-    const char *memf   = "/dev/null";
+    const char *nlistf, *memf;
+    nlistf = memf = "/dev/null";
     kd = kvm_openfiles(nlistf, memf, nullptr, O_RDONLY, nullptr);
     if (!kd) return vec;
     if ((proc_info = kvm_getprocs(kd, KERN_PROC_PID, proc_id, &cntp))) {
@@ -1253,7 +1238,6 @@ namespace ngs::xproc {
 
   std::string envvar_value_from_proc_id(PROCID proc_id, std::string name) {
     std::string value;
-    if (proc_id < 0 || name.empty()) return value;
     std::vector<std::string> vec = environ_from_proc_id(proc_id);
     if (!vec.empty()) {
       for (std::size_t i = 0; i < vec.size(); i++) {
@@ -1276,7 +1260,6 @@ namespace ngs::xproc {
 
   bool envvar_exists_from_proc_id(PROCID proc_id, std::string name) {
     bool exists = false;
-    if (proc_id < 0 || name.empty()) return exists;
     std::vector<std::string> vec = environ_from_proc_id(proc_id);
     if (!vec.empty()) {
       for (std::size_t i = 0; i < vec.size(); i++) {

@@ -56,6 +56,7 @@ namespace dialog_module {
   void widget_set_system(char *sys);
   void widget_set_button_name(int type, char *name);
   char *widget_get_button_name(int type);
+  bool widget_get_canceled();
   
 } // namespace dialog_module
 
