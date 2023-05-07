@@ -290,10 +290,12 @@ const char *cocoa_input_box(const char *str, const char *def, const char *icon, 
     evaluate_shell(cstring_concat(cstring_concat("chmod +x \"", escquotes([[[NSBundle mainBundle] resourcePath] UTF8String])), "/dlgmod\""));
     const char *defaultIcon = [[[[NSBundle mainBundle] infoDictionary] valueForKey:@"CFBundleIconFile"] UTF8String];
     const char *currentIcon = (file_exists(icon)) ? icon : defaultIcon;
-    return evaluate_shell(cstring_concat(cstring_concat(cstring_concat(cstring_concat(
+    const char *result = evaluate_shell(cstring_concat(cstring_concat(cstring_concat(cstring_concat(
     cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat("\"", [[[NSBundle mainBundle] resourcePath]
     UTF8String]), "/dlgmod\" --"), (numbers) ? "get-integer \"" : "get-string \""), escquotes(str)), "\" \""), escquotes(def)), "\" \""),
     escquotes(currentIcon)), "\" \""), escquotes(title)), "\""));
+    if (strcmp(result, "") == 0) cancel_pressed = true;
+    return result;
   }
 
   NSString *myTitle = [NSString stringWithUTF8String:title];
@@ -341,10 +343,12 @@ const char *cocoa_password_box(const char *str, const char *def, const char *ico
     evaluate_shell(cstring_concat(cstring_concat("chmod +x \"", escquotes([[[NSBundle mainBundle] resourcePath] UTF8String])), "/dlgmod\""));
     const char *defaultIcon = [[[[NSBundle mainBundle] infoDictionary] valueForKey:@"CFBundleIconFile"] UTF8String];
     const char *currentIcon = (file_exists(icon)) ? icon : defaultIcon;
-    return evaluate_shell(cstring_concat(cstring_concat(cstring_concat(cstring_concat(
+    const char *result = evaluate_shell(cstring_concat(cstring_concat(cstring_concat(cstring_concat(
     cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat("\"", [[[NSBundle mainBundle] resourcePath]
     UTF8String]), "/dlgmod\" --"), (numbers) ? "get-passcode \"" : "get-password \""), escquotes(str)), "\" \""), escquotes(def)), "\" \""),
     escquotes(currentIcon)), "\" \""), escquotes(title)), "\""));
+    if (strcmp(result, "") == 0) cancel_pressed = true;
+    return result;
   }
 
   NSString *myTitle = [NSString stringWithUTF8String:title];
