@@ -9,12 +9,14 @@
 #endif
 #endif
 
+#include <cmath>
 #include <fstream>
+#include <sstream>
 #include <algorithm>
 
 #include "ImFileDialog.h"
 #include "ImFileDialogMacros.h"
-#include "filedialogs.h"
+#include "filedialogs.hpp"
 
 #ifndef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS
@@ -59,6 +61,19 @@
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__DragonFly__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__sun)
 using namespace lunasvg;
 #endif
+
+struct HumanReadable {
+  std::uintmax_t size{};
+  private: friend
+  std::ostream& operator<<(std::ostream& os, HumanReadable hr) {
+    int i{};
+    double mantissa = hr.size;
+    for (; mantissa >= 1024.; mantissa /= 1024., ++i) { }
+    mantissa = std::ceil(mantissa * 10.) / 10.;
+    os << mantissa << " " << "BKMGTPE"[i];
+    return i == 0 ? os : os << "B";
+  }
+};
 
 namespace ifd {
   static const char *GetDefaultFolderIcon();
@@ -806,7 +821,9 @@ namespace ifd {
     #elif (defined(__MACH__) && defined(__APPLE__))
     NSBeep();
     #else
-    system("printf '\007' 2> /dev/null");
+    if (system(nullptr)) {
+      system("printf '\a' 2> /dev/null");
+    }
     #endif
     return false;
   }
@@ -1490,8 +1507,11 @@ namespace ifd {
 
           // size
           ImGui::TableSetColumnIndex(2);
-          if (!entry.IsDirectory)
-            ImGui::Text("%.3f KiB", entry.Size / 1024.0f);
+          if (!entry.IsDirectory) {
+            std::stringstream ss;
+            ss << HumanReadable{entry.Size};
+            ImGui::Text(ss.str().c_str());
+          }
           else ImGui::Text("---");
         }
 
@@ -1569,7 +1589,7 @@ namespace ifd {
     if (openNewDirectoryDlg)
       ImGui::OpenPopup((IFD_ENTER_DIRECTORY_NAME + std::string("##newdir")).c_str());
     ImGui::SetNextWindowSize(ImVec2(ImGui::CalcTextSize(IFD_ARE_YOU_SURE_YOU_WANT_TO_DELETE).x, 0.0f), 0);
-    if (ImGui::BeginPopupModal((IFD_ARE_YOU_SURE + std::string("##delete")).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal((IFD_ARE_YOU_SURE + std::string("##delete")).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
       if (m_selectedFileItem >= static_cast<int>(m_content.size()) || m_content.size() == 0)
         ImGui::CloseCurrentPopup();
       else {
@@ -1588,7 +1608,7 @@ namespace ifd {
       ImGui::EndPopup();
     }
     ImGui::SetNextWindowSize(ImVec2(ImGui::CalcTextSize(IFD_ARE_YOU_SURE_YOU_WANT_TO_OVERWRITE).x, 0.0f), 0);
-    if (ImGui::BeginPopupModal((IFD_OVERWRITE_FILE + std::string("##overwrite")).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal((IFD_OVERWRITE_FILE + std::string("##overwrite")).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
       if (m_selectedFileItem >= static_cast<int>(m_content.size()) || m_content.size() == 0)
         ImGui::CloseCurrentPopup();
       else {
@@ -1606,7 +1626,7 @@ namespace ifd {
       }
       ImGui::EndPopup();
     }
-    if (ImGui::BeginPopupModal((IFD_ENTER_FILE_NAME + std::string("##newfile")).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal((IFD_ENTER_FILE_NAME + std::string("##newfile")).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
       ImGui::PushItemWidth(ImGui::CalcTextSize((IFD_ENTER_FILE_NAME + std::string("##newfile")).c_str()).x);
       ImGui::InputText("##newfilename", m_newEntryBuffer, 1024); // TODO: remove hardcoded literals
       ImGui::PopItemWidth();
@@ -1628,7 +1648,7 @@ namespace ifd {
       }
       ImGui::EndPopup();
     }
-    if (ImGui::BeginPopupModal((IFD_ENTER_DIRECTORY_NAME + std::string("##newdir")).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal((IFD_ENTER_DIRECTORY_NAME + std::string("##newdir")).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
       ImGui::PushItemWidth(ImGui::CalcTextSize((IFD_ENTER_DIRECTORY_NAME + std::string("##newdir")).c_str()).x);
       ImGui::InputText("##newfilename", m_newEntryBuffer, 1024); // TODO: remove hardcoded literals
       ImGui::PopItemWidth();
@@ -1769,12 +1789,4 @@ namespace ifd {
       escapeKey >= 0 && ImGui::IsKeyPressed(escapeKey))
       m_isOpen = false;
   }
-}
-
-const char *ifd::GetDefaultFolderIcon() {
-  return (const char *)&folder_icon[0];
-}
-
-const char *ifd::GetDefaultFileIcon() {
-  return (const char *)&file_icon[0];
 }
