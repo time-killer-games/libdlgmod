@@ -285,6 +285,7 @@ int cocoa_show_error(const char *str, bool _abort, const char *icon, const char 
 }
 
 const char *cocoa_input_box(const char *str, const char *def, const char *icon, const char *title, bool numbers) {
+  cancel_pressed = false;
   if (![NSThread isMainThread]) {
     evaluate_shell(cstring_concat(cstring_concat("chmod +x \"", escquotes([[[NSBundle mainBundle] resourcePath] UTF8String])), "/dlgmod\""));
     const char *defaultIcon = [[[[NSBundle mainBundle] infoDictionary] valueForKey:@"CFBundleIconFile"] UTF8String];
@@ -373,8 +374,10 @@ const char *cocoa_password_box(const char *str, const char *def, const char *ico
   if (responseTag == NSAlertFirstButtonReturn) {
     [input validateEditing];
     result = [[input stringValue] UTF8String];
-  } else
+  } else {
+    cancel_pressed = true;
     result = "";
+  }
 
   [input release];
   [image release];
