@@ -39,8 +39,8 @@
 #include <cwchar>
 #endif
 
-#include "filesystem.h"
 #include "filesystem.hpp"
+#include "ghc/filesystem.hpp"
 
 #include <fcntl.h>
 #include <sys/types.h>
@@ -563,87 +563,120 @@ namespace ngs::fs {
       }
     }
     #elif defined(__OpenBSD__)
-    auto is_executable = [](string in, string *out) {
-      *out = "";
-      bool success = false;
-      struct stat st;
-      static kvm_t *kd = nullptr;
-      if (!stat(in.c_str(), &st) && (st.st_mode & S_IXUSR) && (st.st_mode & S_IFREG)) {
-        char executable[PATH_MAX];
-        if (realpath(in.c_str(), executable)) {
-          int cntp = 0;
-          kinfo_file *kif = nullptr;
-          kd = kvm_openfiles(nullptr, nullptr, nullptr, KVM_NO_FILES, nullptr);
-          if (!kd) return false;
-          if ((kif = kvm_getfiles(kd, KERN_FILE_BYPID, getpid(), sizeof(struct kinfo_file), &cntp))) {
-            for (int i = 0; i < cntp; i++) {
-              if (kif[i].fd_fd == KERN_FILE_TEXT) {
-                if (st.st_dev == (dev_t)kif[i].va_fsid || st.st_ino == (ino_t)kif[i].va_fileid) {
-                  *out = executable;
-                  success = true;
-                  break;
-                }
+    auto is_exe = [](string exe) {
+      int cntp = 0;
+      string res;
+      kvm_t *kd = nullptr;
+      kinfo_file *kif = nullptr;
+      bool error = false;
+      kd = kvm_openfiles(nullptr, nullptr, nullptr, KVM_NO_FILES, nullptr);
+      if (!kd) return res;
+      if ((kif = kvm_getfiles(kd, KERN_FILE_BYPID, getpid(), sizeof(struct kinfo_file), &cntp))) {
+        for (int i = 0; i < cntp && kif[i].fd_fd < 0; i++) {
+          if (kif[i].fd_fd == KERN_FILE_TEXT) {
+            struct stat st;
+            fallback:
+            char buffer[PATH_MAX];
+            if (!stat(exe.c_str(), &st) && (st.st_mode & S_IXUSR) &&
+              (st.st_mode & S_IFREG) && realpath(exe.c_str(), buffer) &&
+              st.st_dev == (dev_t)kif[i].va_fsid && st.st_ino == (ino_t)kif[i].va_fileid) {
+              res = buffer;
+            }
+            if (res.empty() && !error) {
+              error = true;
+              size_t last_slash_pos = exe.find_last_of("/");
+              if (last_slash_pos != string::npos) {
+                exe = exe.substr(0, last_slash_pos + 1) + kif[i].p_comm;
+                goto fallback;
               }
             }
+            break;
           }
-          kvm_close(kd);
         }
       }
-      return success;
+      kvm_close(kd);
+      return res;
     };
     int mib[4];
-    char **cmdbuf = nullptr;
-    size_t cmdsize = 0;
-    string arg;
+    char **cmd = nullptr;
+    size_t len = 0;
+    vector<string> buffer;
     mib[0] = CTL_KERN;
     mib[1] = KERN_PROC_ARGS;
     mib[2] = getpid();
-    mib[3] = KERN_PROC_ARGV; 
-    if (sysctl(mib, 4, nullptr, &cmdsize, nullptr, 0) == 0) {
-      if ((cmdbuf = (char **)malloc(cmdsize))) {
-        if (sysctl(mib, 4, cmdbuf, &cmdsize, nullptr, 0) == 0) {
-          arg = cmdbuf[0];
+    mib[3] = KERN_PROC_ARGV;
+    bool error = false, retried = false;
+    if (sysctl(mib, 4, nullptr, &len, nullptr, 0) == 0) {
+      if ((cmd = (char **)malloc(len))) {
+        if (sysctl(mib, 4, cmd, &len, nullptr, 0) == 0) {
+          buffer.push_back(cmd[0]);
         }
-        free(cmdbuf);
+        free(cmd);
       }
     }
-    if (!arg.empty()) {
-      bool is_exe = false;
+    if (!buffer.empty()) {
       string argv0;
-      if (arg[0] == '/') {
-        argv0 = arg;
-        is_exe = is_executable(argv0.c_str(), &path);
-      } else if (arg.find('/') == string::npos) {
-        const char *cenv = getenv("PATH");
-        string penv = cenv ? cenv : "";
-        if (!penv.empty()) {
-          vector<string> env = string_split(penv, ':');
-          for (size_t i = 0; i < env.size(); i++) {
-            argv0 = env[i] + "/" + arg;
-            is_exe = is_executable(argv0.c_str(), &path);
-            if (is_exe) break;
-            if (arg[0] == '-') {
-              argv0 = env[i] + "/" + arg.substr(1);
-              is_exe = is_executable(argv0.c_str(), &path);
-              if (is_exe) break;
+      if (!buffer[0].empty()) {
+        fallback:
+        size_t slash_pos = buffer[0].find('/');
+        size_t colon_pos = buffer[0].find(':');
+        if (slash_pos == 0) {
+          argv0 = buffer[0];
+          path = is_exe(argv0);
+        } else if (slash_pos == string::npos || slash_pos > colon_pos) { 
+          string penv = environment_get_variable("PATH");
+          if (!penv.empty()) {
+            retry:
+            string tmp;
+            std::stringstream sstr(penv);
+            while (std::getline(sstr, tmp, ':')) {
+              argv0 = tmp + "/" + buffer[0];
+              path = is_exe(argv0);
+              if (!path.empty()) break;
+              if (slash_pos > colon_pos) {
+                argv0 = tmp + "/" + buffer[0].substr(0, colon_pos);
+                path = is_exe(argv0);
+                if (!path.empty()) break;
+              }
+            }
+          }
+          if (path.empty() && !retried) {
+            retried = true;
+            penv = "/usr/bin:/bin:/usr/sbin:/sbin:/usr/X11R6/bin:/usr/local/bin:/usr/local/sbin";
+            string home = environment_get_variable("HOME");
+            if (!home.empty()) {
+              penv = home + "/bin:" + penv;
+            }
+            goto retry;
+          }
+        }
+        if (path.empty() && slash_pos > 0) {
+          string pwd = environment_get_variable("PWD");
+          if (!pwd.empty()) {
+            argv0 = pwd + "/" + buffer[0];
+            path = is_exe(argv0);
+          }
+          if (path.empty()) {
+            string cwd = directory_get_current_working();
+            if (!cwd.empty()) {
+              argv0 = cwd + "/" + buffer[0];
+              path = is_exe(argv0);
             }
           }
         }
-      } else {
-        const char *cpwd = getenv("PWD");
-        string pwd = cpwd ? cpwd : "";
-        if (!pwd.empty()) {
-          argv0 = pwd + "/" + arg;
-          is_exe = is_executable(argv0.c_str(), &path);
-        }
-        if (pwd.empty() || !is_exe) {
-          char cwd[PATH_MAX];
-          if (getcwd(cwd, sizeof(cwd))) {
-            argv0 = string(cwd) + "/" + arg;
-            is_exe = is_executable(argv0.c_str(), &path);
-          }
+      }
+      if (path.empty() && !error) {
+        error = true;
+        buffer.clear();
+        string underscore = environment_get_variable("_");
+        if (!underscore.empty()) {
+          buffer.push_back(underscore);
+          goto fallback;
         }
       }
+    }
+    if (!path.empty()) {
+      errno = 0;
     }
     #elif defined(__sun)
     char exe[PATH_MAX];
