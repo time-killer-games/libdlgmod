@@ -258,7 +258,7 @@ string add_escaping(string str, bool is_caption, string new_caption) {
 
 string create_shell_dialog(string command) {
   string output; modifyInit = false;
-  PROCID pid = xprocess::process_execute_async((command + " 2> /dev/null").c_str());
+  PROCID pid = xprocess::process_execute_async(command.c_str());
   if (pid) {
     while (!xprocess::completion_status_from_executed_process(pid)) {
       modify_shell_dialog(pid); std::this_thread::sleep_for(std::chrono::milliseconds(5));
