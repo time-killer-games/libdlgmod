@@ -326,7 +326,6 @@ const char *cocoa_input_box(const char *str, const char *def, const char *icon, 
     [input validateEditing];
     result = [[input stringValue] UTF8String];
   } else {
-    cancel_pressed = true;
     result = "";
   }
 
@@ -334,6 +333,9 @@ const char *cocoa_input_box(const char *str, const char *def, const char *icon, 
   [image release];
   [alert release];
 
+  if (strcmp(result, "") == 0) {
+    cancel_pressed = true;
+  }
   return result;
 }
 
@@ -379,7 +381,6 @@ const char *cocoa_password_box(const char *str, const char *def, const char *ico
     [input validateEditing];
     result = [[input stringValue] UTF8String];
   } else {
-    cancel_pressed = true;
     result = "";
   }
 
@@ -387,6 +388,9 @@ const char *cocoa_password_box(const char *str, const char *def, const char *ico
   [image release];
   [alert release];
 
+  if (strcmp(result, "") == 0) {
+    cancel_pressed = true;
+  }
   return result;
 }
 
