@@ -577,6 +577,7 @@ namespace dialog_module {
 
     #ifdef _MSC_VER
     char *InputBox(char *Prompt, char *Title, char *Default) {
+      cancel_pressed = false;
       HRESULT hr = S_OK;
       hr = CoInitialize(nullptr);
 
@@ -627,6 +628,9 @@ namespace dialog_module {
       static string strResult;
       _bstr_t bstrResult = (_bstr_t)result;
       strResult = narrow((wchar_t *)bstrResult);
+      if (strResult.empty()) {
+        cancel_pressed = true;
+      }
       return (char *)strResult.c_str();
     }
 
