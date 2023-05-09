@@ -160,8 +160,8 @@ void get_string_threaded(char *str, char *def, unsigned id) {
   char *result = get_string(str, def);
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
-  DsMapAddDouble(resultMap, (char *)"status", ((dialog_module::widget_get_canceled()) ? 1 : 0));
-  DsMapAddString(resultMap, (char *)"value", ((dialog_module::widget_get_canceled()) ? result : ""));
+  DsMapAddDouble(resultMap, (char *)"status", ((!dialog_module::widget_get_canceled()) ? 1 : 0));
+  DsMapAddString(resultMap, (char *)"value", ((!dialog_module::widget_get_canceled()) ? result : ""));
   CreateAsynEventWithDSMap(resultMap, 63);
   enable_dialog_creation = true;
 }
