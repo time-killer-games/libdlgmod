@@ -285,11 +285,11 @@ namespace dialog_module {
         return CallNextHookEx(hhook, nCode, wParam, lParam);
 
       if (nCode == HCBT_CREATEWND) {
+        cancel_pressed = false;
         CBT_CREATEWNDW *cbtcr = (CBT_CREATEWNDW *)lParam;
         if (win == GetDesktopWindow() ||
           (win != (HWND)wParam && cbtcr->lpcs->hwndParent == win)) {
           dlg = (HWND)wParam;
-          cancel_pressed = false;
           init = true;
         }
       }
@@ -577,7 +577,6 @@ namespace dialog_module {
 
     #ifdef _MSC_VER
     char *InputBox(char *Prompt, char *Title, char *Default) {
-      cancel_pressed = false;
       HRESULT hr = S_OK;
       hr = CoInitialize(nullptr);
 
