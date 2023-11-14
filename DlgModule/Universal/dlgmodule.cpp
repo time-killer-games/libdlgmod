@@ -161,7 +161,7 @@ void get_string_threaded(char *str, char *def, unsigned id) {
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", ((!dialog_module::widget_get_canceled()) ? 1 : 0));
-  DsMapAddString(resultMap, (char *)"value", ((!dialog_module::widget_get_canceled()) ? result : (char *)""));
+  DsMapAddString(resultMap, (char *)"result", ((!dialog_module::widget_get_canceled()) ? result : (char *)""));
   CreateAsynEventWithDSMap(resultMap, 63);
   enable_dialog_creation = true;
 }
@@ -171,7 +171,7 @@ void get_password_threaded(char *str, char *def, unsigned id) {
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", ((!dialog_module::widget_get_canceled()) ? 1 : 0));
-  DsMapAddString(resultMap, (char *)"value", ((!dialog_module::widget_get_canceled()) ? result : (char *)""));
+  DsMapAddString(resultMap, (char *)"result", ((!dialog_module::widget_get_canceled()) ? result : (char *)""));
   CreateAsynEventWithDSMap(resultMap, 63);
   enable_dialog_creation = true;
 }
