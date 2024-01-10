@@ -1399,6 +1399,7 @@ namespace ngs::ps {
     std::unordered_map<int, bool> proc_did_execute;
     std::string standard_input;
     std::mutex stdopt_mutex;
+    long long optlmt = 0;
     int index = -1;
 
     #if !defined(_WIN32)
@@ -1425,11 +1426,7 @@ namespace ngs::ps {
         dup2(p_stdin[0], 0);
         close(p_stdout[0]);
         dup2(p_stdout[1], 1);
-        #if defined(NULLIFY_STDERR)
-        dup2(::open("/dev/null", O_RDONLY), 2);
-        #else
         dup2(p_stdout[1], 2);
-        #endif
         for (int i = 3; i < 4096; i++)
           close(i);
         setsid();
@@ -1469,6 +1466,10 @@ namespace ngs::ps {
       #endif
         std::lock_guard<std::mutex> guard(stdopt_mutex);
         stdopt_map[proc_index].append(buffer, nRead);
+        long long limit = stdopt_map[proc_index].length() -
+        ((optlmt) ? optlmt : stdopt_map[proc_index].length());
+        limit = ((limit < 0) ? 0 : limit);
+        stdopt_map[proc_index] = stdopt_map[proc_index].substr(limit);
       }
     }
 
@@ -1536,11 +1537,7 @@ namespace ngs::ps {
       ZeroMemory(&si, sizeof(si));
       si.cb = sizeof(STARTUPINFOW);
       si.dwFlags = STARTF_USESTDHANDLES;
-      #if defined(NULLIFY_STDERR)
-      si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
-      #else
       si.hStdError = stdout_write;
-      #endif
       si.hStdOutput = stdout_write;
       si.hStdInput = stdin_read;
       PROCESS_INFORMATION pi; ZeroMemory(&pi, sizeof(pi)); NGS_PROCID proc_index = 0;
@@ -1590,6 +1587,10 @@ namespace ngs::ps {
     complete_map[proc_index] = false;
     proc_thread.detach();
     return proc_index;
+  }
+
+  void stdout_set_buffer_limit(long long limit) {
+    optlmt = limit;
   }
 
   std::string read_from_stdout_for_child_proc_id(NGS_PROCID proc_id) {
