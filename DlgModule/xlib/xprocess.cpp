@@ -751,6 +751,10 @@ namespace xprocess {
     return result.c_str();
   }
 
+  void set_buffer_limit_for_standard_output(long long limit) {
+    ::stdout_set_buffer_limit(limit);
+  }
+
   bool free_executed_process_standard_input(NGS_PROCID proc_index) {
     return ::free_stdin_for_child_proc_id(proc_index);
   }
