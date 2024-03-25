@@ -103,7 +103,11 @@ std::string arg3;
 std::string arg4;
 
 void show_message_threaded(char *str, unsigned id) {
-  double result = show_message(str);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  double result = dialog_module::show_message(str, true);
+  #else
+  double result = dialog_module::show_message(str);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", result);
@@ -112,7 +116,11 @@ void show_message_threaded(char *str, unsigned id) {
 }
 
 void show_message_cancelable_threaded(char *str, unsigned id) {
-  double result = show_message_cancelable(str);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  double result = dialog_module::show_message_cancelable(str, true);
+  #else
+  double result = dialog_module::show_message_cancelable(str);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", result);
@@ -121,7 +129,11 @@ void show_message_cancelable_threaded(char *str, unsigned id) {
 }
 
 void show_question_threaded(char *str, unsigned id) {
-  double result = show_question(str);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  double result = dialog_module::show_question(str, true);
+  #else
+  double result = dialog_module::show_question(str);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", result);
@@ -130,7 +142,11 @@ void show_question_threaded(char *str, unsigned id) {
 }
 
 void show_question_cancelable_threaded(char *str, unsigned id) {
-  double result = show_question_cancelable(str);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  double result = dialog_module::show_question_cancelable(str, true);
+  #else
+  double result = dialog_module::show_question_cancelable(str);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", result);
@@ -139,7 +155,11 @@ void show_question_cancelable_threaded(char *str, unsigned id) {
 }
 
 void show_attempt_threaded(char *str, unsigned id) {
-  double result = show_attempt(str);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  double result = dialog_module::show_attempt(str, true);
+  #else
+  double result = dialog_module::show_attempt(str);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", result);
@@ -148,7 +168,11 @@ void show_attempt_threaded(char *str, unsigned id) {
 }
 
 void show_error_threaded(char *str, double abort, unsigned id) {
-  double result = show_error(str, abort);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  double result = dialog_module::show_error(str, abort, true);
+  #else
+  double result = dialog_module::show_error(str, abort);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", result);
@@ -157,7 +181,11 @@ void show_error_threaded(char *str, double abort, unsigned id) {
 }
 
 void get_string_threaded(char *str, char *def, unsigned id) {
-  char *result = get_string(str, def);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  char *result = dialog_module::get_string(str, def, true);
+  #else
+  char *result = dialog_module::get_string(str, def);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", ((!dialog_module::widget_get_canceled()) ? 1 : 0));
@@ -167,7 +195,11 @@ void get_string_threaded(char *str, char *def, unsigned id) {
 }
 
 void get_password_threaded(char *str, char *def, unsigned id) {
-  char *result = get_password(str, def);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  char *result = dialog_module::get_password(str, def, true);
+  #else
+  char *result = dialog_module::get_password(str, def);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", ((!dialog_module::widget_get_canceled()) ? 1 : 0));
@@ -177,7 +209,11 @@ void get_password_threaded(char *str, char *def, unsigned id) {
 }
 
 void get_integer_threaded(char *str, double def, unsigned id) {
-  double result = get_integer(str, def);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  double result = dialog_module::get_integer(str, def, true);
+  #else
+  double result = dialog_module::get_integer(str, def);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", ((!dialog_module::widget_get_canceled()) ? 1 : 0));
@@ -187,7 +223,11 @@ void get_integer_threaded(char *str, double def, unsigned id) {
 }
 
 void get_passcode_threaded(char *str, double def, unsigned id) {
-  double result = get_passcode(str, def);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  double result = dialog_module::get_passcode(str, def, true);
+  #else
+  double result = dialog_module::get_passcode(str, def);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", ((!dialog_module::widget_get_canceled()) ? 1 : 0));
@@ -197,7 +237,11 @@ void get_passcode_threaded(char *str, double def, unsigned id) {
 }
 
 void get_open_filename_threaded(char *filter, char *fname, unsigned id) {
-  char *result = get_open_filename(filter, fname);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  char *result = dialog_module::get_open_filename(filter, fname, true);
+  #else
+  char *result = dialog_module::get_open_filename(filter, fname);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -207,7 +251,11 @@ void get_open_filename_threaded(char *filter, char *fname, unsigned id) {
 }
 
 void get_open_filename_ext_threaded(char *filter, char *fname, char *dir, char *title, unsigned id) {
-  char *result = get_open_filename_ext(filter, fname, dir, title);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  char *result = dialog_module::get_open_filename_ext(filter, fname, dir, title, true);
+  #else
+  char *result = dialog_module::get_open_filename_ext(filter, fname, dir, title);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -217,7 +265,11 @@ void get_open_filename_ext_threaded(char *filter, char *fname, char *dir, char *
 }
 
 void get_open_filenames_threaded(char *filter, char *fname, unsigned id) {
-  char *result = get_open_filenames(filter, fname);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  char *result = dialog_module::get_open_filenames(filter, fname, true);
+  #else
+  char *result = dialog_module::get_open_filenames(filter, fname);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -227,7 +279,11 @@ void get_open_filenames_threaded(char *filter, char *fname, unsigned id) {
 }
 
 void get_open_filenames_ext_threaded(char *filter, char *fname, char *dir, char *title, unsigned id) {
-  char *result = get_open_filenames_ext(filter, fname, dir, title);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  char *result = dialog_module::get_open_filenames_ext(filter, fname, dir, title, true);
+  #else
+  char *result = dialog_module::get_open_filenames_ext(filter, fname, dir, title);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -237,7 +293,11 @@ void get_open_filenames_ext_threaded(char *filter, char *fname, char *dir, char 
 }
 
 void get_save_filename_threaded(char *filter, char *fname, unsigned id) {
-  char *result = get_save_filename(filter, fname);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  char *result = dialog_module::get_save_filename(filter, fname, true);
+  #else
+  char *result = dialog_module::get_save_filename(filter, fname);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -247,7 +307,11 @@ void get_save_filename_threaded(char *filter, char *fname, unsigned id) {
 }
 
 void get_save_filename_ext_threaded(char *filter, char *fname, char *dir, char *title, unsigned id) {
-  char *result = get_save_filename_ext(filter, fname, dir, title);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  char *result = dialog_module::get_save_filename_ext(filter, fname, dir, title, true);
+  #else
+  char *result = dialog_module::get_save_filename_ext(filter, fname, dir, title);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -257,7 +321,11 @@ void get_save_filename_ext_threaded(char *filter, char *fname, char *dir, char *
 }
 
 void get_directory_threaded(char *dname, unsigned id) {
-  char *result = get_directory(dname);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  char *result = dialog_module::get_directory(dname, true);
+  #else
+  char *result = dialog_module::get_directory(dname);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -267,7 +335,11 @@ void get_directory_threaded(char *dname, unsigned id) {
 }
 
 void get_directory_alt_threaded(char *capt, char *root, unsigned id) {
-  char *result = get_directory_alt(capt, root);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  char *result = dialog_module::get_directory_alt(capt, root, true);
+  #else
+  char *result = dialog_module::get_directory_alt(capt, root);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -277,7 +349,11 @@ void get_directory_alt_threaded(char *capt, char *root, unsigned id) {
 }
 
 void get_color_threaded(double defcol, unsigned id) {
-  double result = get_color(defcol);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  double result = dialog_module::get_color(defcol, true);
+  #else
+  double result = dialog_module::get_color(defcol);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -287,7 +363,11 @@ void get_color_threaded(double defcol, unsigned id) {
 }
 
 void get_color_ext_threaded(double defcol, char *title, unsigned id) {
-  double result = get_color_ext(defcol, title);
+  #if (defined(__APPLE__) && defined(__MACH__))
+  double result = dialog_module::get_color_ext(defcol, title, true);
+  #else
+  double result = dialog_module::get_color_ext(defcol, title);
+  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -307,8 +387,12 @@ double show_message_async(char *str) {
     enable_dialog_creation = false;
     unsigned id = dialog_identifier++;
     arg1 = str;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    show_message_threaded((char *)arg1.c_str(), id);
+    #else
     std::thread dialog_thread(show_message_threaded, (char *)arg1.c_str(), id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -323,8 +407,12 @@ double show_message_cancelable_async(char *str) {
     enable_dialog_creation = false;
     unsigned id = dialog_identifier++;
     arg1 = str;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    show_message_cancelable_threaded((char *)arg1.c_str(), id);
+    #else
     std::thread dialog_thread(show_message_cancelable_threaded, (char *)arg1.c_str(), id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -339,8 +427,12 @@ double show_question_async(char *str) {
     enable_dialog_creation = false;
     unsigned id = dialog_identifier++;
     arg1 = str;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    show_question_threaded((char *)arg1.c_str(), id);
+    #else
     std::thread dialog_thread(show_question_threaded, (char *)arg1.c_str(), id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -355,8 +447,12 @@ double show_question_cancelable_async(char *str) {
     enable_dialog_creation = false;
     unsigned id = dialog_identifier++;
     arg1 = str;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    show_question_cancelable_threaded((char *)arg1.c_str(), id);
+    #else
     std::thread dialog_thread(show_question_cancelable_threaded, (char *)arg1.c_str(), id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -371,8 +467,12 @@ double show_attempt_async(char *str) {
     enable_dialog_creation = false;
     unsigned id = dialog_identifier++;
     arg1 = str;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    show_attempt_threaded((char *)arg1.c_str(), id);
+    #else
     std::thread dialog_thread(show_attempt_threaded, (char *)arg1.c_str(), id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -387,8 +487,12 @@ double show_error_async(char *str, double abort) {
     enable_dialog_creation = false;
     unsigned id = dialog_identifier++;
     arg1 = str;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    show_error_threaded((char *)arg1.c_str(), abort, id);
+    #else
     std::thread dialog_thread(show_error_threaded, (char *)arg1.c_str(), abort, id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -404,8 +508,12 @@ double get_string_async(char *str, char *def) {
     unsigned id = dialog_identifier++;
     arg1 = str;
     arg2 = def;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    get_string_threaded((char *)arg1.c_str(), (char *)arg2.c_str(), id);
+    #else
     std::thread dialog_thread(get_string_threaded, (char *)arg1.c_str(), (char *)arg2.c_str(), id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -421,8 +529,12 @@ double get_password_async(char *str, char *def) {
     unsigned id = dialog_identifier++;
     arg1 = str;
     arg2 = def;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    get_password_threaded((char *)arg1.c_str(), (char *)arg2.c_str(), id);
+    #else
     std::thread dialog_thread(get_password_threaded, (char *)arg1.c_str(), (char *)arg2.c_str(), id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -437,8 +549,12 @@ double get_integer_async(char *str, double def) {
     enable_dialog_creation = false;
     unsigned id = dialog_identifier++;
     arg1 = str;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    get_integer_threaded((char *)arg1.c_str(), def, id);
+    #else
     std::thread dialog_thread(get_integer_threaded, (char *)arg1.c_str(), def, id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -453,8 +569,12 @@ double get_passcode_async(char *str, double def) {
     enable_dialog_creation = false;
     unsigned id = dialog_identifier++;
     arg1 = str;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    get_passcode_threaded((char *)arg1.c_str(), def, id);
+    #else
     std::thread dialog_thread(get_passcode_threaded, (char *)arg1.c_str(), def, id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -470,8 +590,12 @@ double get_open_filename_async(char *filter, char *fname) {
     unsigned id = dialog_identifier++;
     arg1 = filter;
     arg2 = fname;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    get_open_filename_threaded((char *)arg1.c_str(), (char *)arg2.c_str(), id);
+    #else
     std::thread dialog_thread(get_open_filename_threaded, (char *)arg1.c_str(), (char *)arg2.c_str(), id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -489,8 +613,12 @@ double get_open_filename_ext_async(char *filter, char *fname, char *dir, char *t
     arg2 = fname;
     arg3 = dir;
     arg4 = title;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    get_open_filename_ext_threaded((char *)arg1.c_str(), (char *)arg2.c_str(), (char *)arg3.c_str(), (char *)arg4.c_str(), id);
+    #else
     std::thread dialog_thread(get_open_filename_ext_threaded, (char *)arg1.c_str(), (char *)arg2.c_str(), (char *)arg3.c_str(), (char *)arg4.c_str(), id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -506,8 +634,12 @@ double get_open_filenames_async(char *filter, char *fname) {
     unsigned id = dialog_identifier++;
     arg1 = filter;
     arg2 = fname;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    get_open_filenames_threaded((char *)arg1.c_str(), (char *)arg2.c_str(), id);
+    #else
     std::thread dialog_thread(get_open_filenames_threaded, (char *)arg1.c_str(), (char *)arg2.c_str(), id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -525,8 +657,12 @@ double get_open_filenames_ext_async(char *filter, char *fname, char *dir, char *
     arg2 = fname;
     arg3 = dir;
     arg4 = title;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    get_open_filenames_ext_threaded((char *)arg1.c_str(), (char *)arg2.c_str(), (char *)arg3.c_str(), (char *)arg4.c_str(), id);
+    #else
     std::thread dialog_thread(get_open_filenames_ext_threaded, (char *)arg1.c_str(), (char *)arg2.c_str(), (char *)arg3.c_str(), (char *)arg4.c_str(), id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -542,8 +678,12 @@ double get_save_filename_async(char *filter, char *fname) {
     unsigned id = dialog_identifier++;
     arg1 = filter;
     arg2 = fname;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    get_save_filename_threaded((char *)arg1.c_str(), (char *)arg2.c_str(), id);
+    #else
     std::thread dialog_thread(get_save_filename_threaded, (char *)arg1.c_str(), (char *)arg2.c_str(), id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -561,8 +701,12 @@ double get_save_filename_ext_async(char *filter, char *fname, char *dir, char *t
     arg2 = fname;
     arg3 = dir;
     arg4 = title;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    get_save_filename_ext_threaded((char *)arg1.c_str(), (char *)arg2.c_str(), (char *)arg3.c_str(), (char *)arg4.c_str(), id);
+    #else
     std::thread dialog_thread(get_save_filename_ext_threaded, (char *)arg1.c_str(), (char *)arg2.c_str(), (char *)arg3.c_str(), (char *)arg4.c_str(), id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -577,8 +721,12 @@ double get_directory_async(char *dname) {
     enable_dialog_creation = false;
     unsigned id = dialog_identifier++;
     arg1 = dname;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    get_directory_threaded((char *)arg1.c_str(), id);
+    #else
     std::thread dialog_thread(get_directory_threaded, (char *)arg1.c_str(), id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -594,8 +742,12 @@ double get_directory_alt_async(char *capt, char *root) {
     unsigned id = dialog_identifier++;
     arg1 = capt;
     arg2 = root;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    get_directory_alt_threaded((char *)arg1.c_str(), (char *)arg2.c_str(), id);
+    #else
     std::thread dialog_thread(get_directory_alt_threaded, (char *)arg1.c_str(), (char *)arg2.c_str(), id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -609,8 +761,12 @@ double get_color_async(double defcol) {
   if (enable_dialog_creation) {
 	enable_dialog_creation = false;
     unsigned id = dialog_identifier++;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    get_color_threaded((int)defcol, id);
+    #else
     std::thread dialog_thread(get_color_threaded, (int)defcol, id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;
@@ -625,8 +781,12 @@ double get_color_ext_async(double defcol, char *title) {
     enable_dialog_creation = false;
     unsigned id = dialog_identifier++;
     arg2 = title;
+    #if (defined(__APPLE__) && defined(__MACH__))
+    get_color_ext_threaded((int)defcol, (char *)arg2.c_str(), id);
+    #else
     std::thread dialog_thread(get_color_ext_threaded, (int)defcol, (char *)arg2.c_str(), id);
     dialog_thread.detach();
+    #endif
     return (double)id;
   }
   return dialog_identifier - 1;

@@ -35,17 +35,11 @@
 #include <vector>
 #include <map>
 
-#if defined(DLGMOD_CLI)
-#include "dlgmodule.h"
-#else
 #include "../Universal/dlgmodule.h"
-#endif
-#include "filedialogs.hpp"
-#include "config.h"
 
 #include <sys/stat.h>
-#include <Cocoa/Cocoa.h>
-#include <libproc.h>
+#include <AppKit/AppKit.h>
+#include <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #include <unistd.h>
 
 using std::string;
@@ -61,67 +55,17 @@ enum BUTTON_TYPES {
   BUTTON_RETRY
 };
 
+int const btn_array_len = 7;
+string btn_array[btn_array_len] = { "Abort", "Ignore", "OK", "Cancel", "Yes", "No", "Retry" };
+
 void *owner = nullptr;
 bool cancel_pressed = false;
-
-const char *cocoa_widget_get_button_name(int type);
-
-const char *escquotes(const char *str) {
-  NSString *nsstr = [NSString stringWithUTF8String:str];
-  return [[nsstr stringByReplacingOccurrencesOfString:@"\"" withString:@"\\\""] UTF8String];
-}
-
-const char *cocoa_get_bundle_id() {
-  char buffer[PROC_PIDPATHINFO_MAXSIZE];
-  if (proc_pidpath(getpid(), buffer, sizeof(buffer)) > 0) {
-    NSString *result = [[NSString stringWithUTF8String:buffer] stringByAppendingString:@"\0"];
-    if (strcmp([result UTF8String], "") == 0) return "";
-    result = [result stringByDeletingLastPathComponent];
-    if (strcmp([[result lastPathComponent] UTF8String], "MacOS") != 0) return "";
-    result = [result stringByDeletingLastPathComponent];
-    if (strcmp([[result lastPathComponent] UTF8String], "Contents") != 0) return "";
-    result = [result stringByDeletingLastPathComponent];
-    if (strcmp([[result pathExtension] UTF8String], "app") != 0) return "";
-    return [[[NSBundle bundleWithPath:result] bundleIdentifier] UTF8String];
-  }
-  return "";
-}
-
-int cstring_to_integer(const char *cstr) {
-  return (int)strtol(cstr, nullptr, 10);
-}
-
-const char *integer_to_cstring(int numb) {
-  return [[@(numb) stringValue] UTF8String];
-}
-
-const char *cstring_concat(const char *cstr1, const char *cstr2) {
-  return [[[NSString stringWithUTF8String:cstr1]
-  stringByAppendingString:[NSString stringWithUTF8String:cstr2]] UTF8String];
-}
-
-bool file_exists(const char *fname) {
-  NSFileManager *fileManager = [NSFileManager defaultManager];
-  return [fileManager fileExistsAtPath:[NSString stringWithUTF8String:fname]];
-}
-
-const char *evaluate_shell(const char *command) {
-  char *buffer = nullptr;
-  size_t buffer_size = 0;
-  NSString *result = @"";
-
-  FILE *file = popen(command, "r");
-  while (getline(&buffer, &buffer_size, file) != -1)
-    result = [result stringByAppendingString:[NSString stringWithUTF8String:buffer]];
-
-  free(buffer);
-  pclose(file);
-
-  if ([result hasSuffix:@"\n"])
-    result = [result substringToIndex:[result length] - 1];
-  
-  return [result UTF8String];
-}
+int msgres;
+int qstres;
+int attemptres;
+int errorres;
+std::string strres;
+bool done;
 
 char *cocoa_widget_get_owner() {
   static string str;
@@ -133,17 +77,12 @@ void cocoa_widget_set_owner(char *hwnd) {
   owner = (void *)strtoull(hwnd, nullptr, 10);
 }
 
-int cocoa_show_message(const char *str, bool has_cancel, const char *icon, const char *title) {
+const char *cocoa_widget_get_button_name(int type) {
+  return dialog_module::widget_get_button_name(type);
+}
+
+int cocoa_show_message(const char *str, bool has_cancel, const char *icon, const char *title, bool async) {
   cancel_pressed = false;
-  if (![NSThread isMainThread]) {
-    evaluate_shell(cstring_concat(cstring_concat("chmod +x \"", escquotes([[[NSBundle mainBundle] resourcePath] UTF8String])), "/dlgmod\""));
-    const char *defaultIcon = [[[[NSBundle mainBundle] infoDictionary] valueForKey:@"CFBundleIconFile"] UTF8String];
-    const char *currentIcon = (file_exists(icon)) ? icon : defaultIcon;
-    return cstring_to_integer(evaluate_shell(cstring_concat(cstring_concat(cstring_concat(cstring_concat(
-    cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat("\"", [[[NSBundle mainBundle] resourcePath]
-    UTF8String]), "/dlgmod\" --"), (has_cancel) ? "show-message-cancelable \"" :
-    "show-message \""), escquotes(str)), "\" \""), escquotes(currentIcon)), "\" \""), escquotes(title)), "\"")));
-  }
 
   NSString *myTitle = [NSString stringWithUTF8String:title];
   NSString *myStr = [NSString stringWithUTF8String:str];
@@ -157,27 +96,30 @@ int cocoa_show_message(const char *str, bool has_cancel, const char *icon, const
   if (has_cancel) [alert addButtonWithTitle:[NSString stringWithUTF8String:cocoa_widget_get_button_name(BUTTON_CANCEL)]];
   [alert setAlertStyle:(NSAlertStyle)1];
 
-  NSModalResponse responseTag = [alert runModal];
+  [alert beginSheetModalForWindow:(NSWindow *)owner completionHandler:^(NSInteger result) {
+
+    if (result == NSAlertFirstButtonReturn) {
+      msgres = 1;
+      [NSApp stopModal];
+    }
+
+    if (result == NSAlertSecondButtonReturn) {
+      msgres = -1;
+      [NSApp stopModal];
+    }
+
+  }];
+
+  [NSApp runModalForWindow:[alert window]];
+
   [image release];
   [alert release];
 
-  if (responseTag == NSAlertFirstButtonReturn)
-    return 1;
-
-  return -1;
+  return msgres;
 }
 
-int cocoa_show_question(const char *str, bool has_cancel, const char *icon, const char *title) {
+int cocoa_show_question(const char *str, bool has_cancel, const char *icon, const char *title, bool async) {
   cancel_pressed = false;
-  if (![NSThread isMainThread]) {
-    evaluate_shell(cstring_concat(cstring_concat("chmod +x \"", escquotes([[[NSBundle mainBundle] resourcePath] UTF8String])), "/dlgmod\""));
-    const char *defaultIcon = [[[[NSBundle mainBundle] infoDictionary] valueForKey:@"CFBundleIconFile"] UTF8String];
-    const char *currentIcon = (file_exists(icon)) ? icon : defaultIcon;
-    return cstring_to_integer(evaluate_shell(cstring_concat(cstring_concat(cstring_concat(cstring_concat(
-    cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat("\"", [[[NSBundle mainBundle] resourcePath]
-    UTF8String]), "/dlgmod\" --"), (has_cancel) ? "show-question-cancelable \"" :
-    "show-question \""), escquotes(str)), "\" \""), escquotes(currentIcon)), "\" \""), escquotes(title)), "\"")));
-  }
 
   NSString *myTitle = [NSString stringWithUTF8String:title];
   NSString *myStr = [NSString stringWithUTF8String:str];
@@ -192,29 +134,35 @@ int cocoa_show_question(const char *str, bool has_cancel, const char *icon, cons
   if (has_cancel) [alert addButtonWithTitle:[NSString stringWithUTF8String:cocoa_widget_get_button_name(BUTTON_CANCEL)]];
   [alert setAlertStyle:(NSAlertStyle)1];
 
-  NSModalResponse responseTag = [alert runModal];
+  [alert beginSheetModalForWindow:(NSWindow *)owner completionHandler:^(NSInteger result) {
+
+    if (result == NSAlertFirstButtonReturn) {
+      qstres = 1;
+      [NSApp stopModal];
+    }
+
+    if (result == NSAlertSecondButtonReturn) {
+      qstres = 0;
+      [NSApp stopModal];
+    }
+
+    if (result == NSAlertThirdButtonReturn) {
+      qstres = -1;
+      [NSApp stopModal];
+    }
+
+  }];
+    
+  [NSApp runModalForWindow:[alert window]];
+
   [image release];
   [alert release];
 
-  if (responseTag == NSAlertFirstButtonReturn)
-    return 1;
-
-  if (responseTag == NSAlertSecondButtonReturn)
-    return 0;
-
-  return -1;
+  return qstres;
 }
 
-int cocoa_show_attempt(const char *str, const char *icon, const char *title) {
+int cocoa_show_attempt(const char *str, const char *icon, const char *title, bool async) {
   cancel_pressed = false;
-  if (![NSThread isMainThread]) {
-    evaluate_shell(cstring_concat(cstring_concat("chmod +x \"", escquotes([[[NSBundle mainBundle] resourcePath] UTF8String])), "/dlgmod\""));
-    const char *defaultIcon = [[[[NSBundle mainBundle] infoDictionary] valueForKey:@"CFBundleIconFile"] UTF8String];
-    const char *currentIcon = (file_exists(icon)) ? icon : defaultIcon;
-    return cstring_to_integer(evaluate_shell(cstring_concat(cstring_concat(cstring_concat(cstring_concat(
-    cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat("\"", [[[NSBundle mainBundle] resourcePath]
-    UTF8String]), "/dlgmod\" --"), "show-attempt \""), escquotes(str)), "\" \""), escquotes(currentIcon)), "\" \""), escquotes(title)), "\"")));
-  }
 
   NSString *myStr = [NSString stringWithUTF8String:str];
   NSAlert *alert = [[NSAlert alloc] init];
@@ -230,35 +178,30 @@ int cocoa_show_attempt(const char *str, const char *icon, const char *title) {
   [alert addButtonWithTitle:[NSString stringWithUTF8String:cocoa_widget_get_button_name(BUTTON_CANCEL)]];
   [alert setAlertStyle:(NSAlertStyle)2];
 
-  NSModalResponse responseTag = [alert runModal];
+  [alert beginSheetModalForWindow:(NSWindow *)owner completionHandler:^(NSInteger result) {
+
+    if (result == NSAlertFirstButtonReturn) {
+      attemptres = 0;
+      [NSApp stopModal];
+    }
+
+    if (result == NSAlertSecondButtonReturn) {
+      attemptres = -1;
+      [NSApp stopModal];
+    }
+
+  }];
+
+  [NSApp runModalForWindow:[alert window]];
+    
   [image release];
   [alert release];
 
-  if (responseTag == NSAlertFirstButtonReturn)
-    return 0;
-
-  return -1;
+  return attemptres;
 }
 
-int cocoa_show_error(const char *str, bool _abort, const char *icon, const char *title) {
+int cocoa_show_error(const char *str, bool _abort, const char *icon, const char *title, bool async) {
   cancel_pressed = false;
-  if (![NSThread isMainThread]) {
-    evaluate_shell(cstring_concat(cstring_concat("chmod +x \"", escquotes([[[NSBundle mainBundle] resourcePath] UTF8String])), "/dlgmod\""));
-    const char *defaultIcon = [[[[NSBundle mainBundle] infoDictionary] valueForKey:@"CFBundleIconFile"] UTF8String];
-    const char *currentIcon = (file_exists(icon)) ? icon : defaultIcon;
-    #if defined(DLGMOD_CLI)
-    return cstring_to_integer(evaluate_shell(cstring_concat(cstring_concat(cstring_concat(cstring_concat(
-    cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat("\"", [[[NSBundle mainBundle] resourcePath]
-    UTF8String]), "/dlgmod\" --"), "show-error \""), escquotes(str)), (_abort) ? "\" 1 \"" : "\" 0 \""),
-    escquotes(currentIcon)), "\" \""), escquotes(title)), "\"")));
-    #else
-    int result = cstring_to_integer(evaluate_shell(cstring_concat(cstring_concat(cstring_concat(cstring_concat(
-    cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat("\"", [[[NSBundle mainBundle] resourcePath]
-    UTF8String]), "/dlgmod\" --"), "show-error \""), escquotes(str)), (_abort) ? "\" 1 \"" : "\" 0 \""),
-    escquotes(currentIcon)), "\" \""), escquotes(title)), "\"")));
-    if (result == 0) exit(0); return result;
-    #endif
-  }
 
   NSString *myStr = [NSString stringWithUTF8String:str];
   NSAlert *alert = [[NSAlert alloc] init];
@@ -273,30 +216,30 @@ int cocoa_show_error(const char *str, bool _abort, const char *icon, const char 
   [alert addButtonWithTitle:[NSString stringWithUTF8String:cocoa_widget_get_button_name(BUTTON_ABORT)]];
   if (!_abort) [alert addButtonWithTitle:[NSString stringWithUTF8String:cocoa_widget_get_button_name(BUTTON_IGNORE)]];
   [alert setAlertStyle:(NSAlertStyle)2];
+    
+  [alert beginSheetModalForWindow:(NSWindow *)owner completionHandler:^(NSInteger result) {
+        
+    if (result == NSAlertFirstButtonReturn) {
+      exit(0);
+    }
 
-  NSModalResponse responseTag = [alert runModal];
+    if (result == NSAlertSecondButtonReturn) {
+      errorres = -1;
+      [NSApp stopModal];
+    }
+
+  }];
+
+  [NSApp runModalForWindow:[alert window]];
+
   [image release];
   [alert release];
 
-  if (responseTag == NSAlertFirstButtonReturn || _abort)
-    return 1;
-
-  return -1;
+  return errorres;
 }
 
-const char *cocoa_input_box(const char *str, const char *def, const char *icon, const char *title, bool numbers) {
+const char *cocoa_input_box(const char *str, const char *def, const char *icon, const char *title, bool numbers, bool async) {
   cancel_pressed = false;
-  if (![NSThread isMainThread]) {
-    evaluate_shell(cstring_concat(cstring_concat("chmod +x \"", escquotes([[[NSBundle mainBundle] resourcePath] UTF8String])), "/dlgmod\""));
-    const char *defaultIcon = [[[[NSBundle mainBundle] infoDictionary] valueForKey:@"CFBundleIconFile"] UTF8String];
-    const char *currentIcon = (file_exists(icon)) ? icon : defaultIcon;
-    const char *result = evaluate_shell(cstring_concat(cstring_concat(cstring_concat(cstring_concat(
-    cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat("\"", [[[NSBundle mainBundle] resourcePath]
-    UTF8String]), "/dlgmod\" --"), (numbers) ? "get-integer \"" : "get-string \""), escquotes(str)), "\" \""), escquotes(def)), "\" \""),
-    escquotes(currentIcon)), "\" \""), escquotes(title)), "\""));
-    if (strcmp(result, "") == 0) cancel_pressed = true;
-    return result;
-  }
 
   NSString *myTitle = [NSString stringWithUTF8String:title];
   NSString *myStr = [NSString stringWithUTF8String:str];
@@ -319,39 +262,36 @@ const char *cocoa_input_box(const char *str, const char *def, const char *icon, 
   NSView *myAccessoryView = [alert accessoryView];
   [[alert window] setInitialFirstResponder:myAccessoryView];
 
-  NSModalResponse responseTag = [alert runModal];
-  const char *result;
+  [alert beginSheetModalForWindow:(NSWindow *)owner completionHandler:^(NSInteger result) {
 
-  if (responseTag == NSAlertFirstButtonReturn) {
-    [input validateEditing];
-    result = [[input stringValue] UTF8String];
-  } else {
-    result = "";
-  }
+    if (result == NSAlertFirstButtonReturn) {
+      [input validateEditing];
+      strres = [[input stringValue] UTF8String];
+      cancel_pressed = false;
+      [NSApp stopModal];
+    } else if (result == NSAlertSecondButtonReturn) {
+      strres = "";
+      cancel_pressed = true;
+      [NSApp stopModal];
+    }
+
+  }];
+
+  [NSApp runModalForWindow:[alert window]];
 
   [input release];
   [image release];
   [alert release];
 
-  if (strcmp(result, "") == 0) {
+  if (strcmp(strres.c_str(), "") == 0) {
     cancel_pressed = true;
   }
-  return result;
+
+  return strres.c_str();
 }
 
-const char *cocoa_password_box(const char *str, const char *def, const char *icon, const char *title, bool numbers) {
+const char *cocoa_password_box(const char *str, const char *def, const char *icon, const char *title, bool numbers, bool async) {
   cancel_pressed = false;
-  if (![NSThread isMainThread]) {
-    evaluate_shell(cstring_concat(cstring_concat("chmod +x \"", escquotes([[[NSBundle mainBundle] resourcePath] UTF8String])), "/dlgmod\""));
-    const char *defaultIcon = [[[[NSBundle mainBundle] infoDictionary] valueForKey:@"CFBundleIconFile"] UTF8String];
-    const char *currentIcon = (file_exists(icon)) ? icon : defaultIcon;
-    const char *result = evaluate_shell(cstring_concat(cstring_concat(cstring_concat(cstring_concat(
-    cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat("\"", [[[NSBundle mainBundle] resourcePath]
-    UTF8String]), "/dlgmod\" --"), (numbers) ? "get-passcode \"" : "get-password \""), escquotes(str)), "\" \""), escquotes(def)), "\" \""),
-    escquotes(currentIcon)), "\" \""), escquotes(title)), "\""));
-    if (strcmp(result, "") == 0) cancel_pressed = true;
-    return result;
-  }
 
   NSString *myTitle = [NSString stringWithUTF8String:title];
   NSString *myStr = [NSString stringWithUTF8String:str];
@@ -374,76 +314,388 @@ const char *cocoa_password_box(const char *str, const char *def, const char *ico
   NSView *myAccessoryView = [alert accessoryView];
   [[alert window] setInitialFirstResponder:myAccessoryView];
 
-  NSModalResponse responseTag = [alert runModal];
-  const char *result;
+  [alert beginSheetModalForWindow:(NSWindow *)owner completionHandler:^(NSInteger result) {
 
-  if (responseTag == NSAlertFirstButtonReturn) {
-    [input validateEditing];
-    result = [[input stringValue] UTF8String];
-  } else {
-    result = "";
-  }
+    if (result == NSAlertFirstButtonReturn) {
+      [input validateEditing];
+      strres = [[input stringValue] UTF8String];
+      cancel_pressed = false;
+      [NSApp stopModal];
+    } else if (result == NSAlertSecondButtonReturn) {
+      strres = "";
+      cancel_pressed = true;
+      [NSApp stopModal];
+    }
+
+  }];
+
+  [NSApp runModalForWindow:[alert window]];
 
   [input release];
   [image release];
   [alert release];
 
-  if (strcmp(result, "") == 0) {
+  if (strcmp(strres.c_str(), "") == 0) {
     cancel_pressed = true;
   }
-  return result;
+
+  return strres.c_str();
 }
 
-const char *cocoa_get_open_filename(const char *filter, const char *fname, const char *dir, const char *title, bool mselect) {
+std::string theOpenResult;
+bool initOpenAccessory;
+NSString *selectedOpenPattern;
+int openPopIndex;
+NSArray *openPatternItems;
+const char *cocoa_get_open_filename(const char *filter, const char *fname, const char *dir, const char *title, bool mselect, bool async) {
   cancel_pressed = false;
-  if (![NSThread isMainThread]) {
-    evaluate_shell(cstring_concat(cstring_concat("chmod +x \"", escquotes([[[NSBundle mainBundle] resourcePath] UTF8String])), "/dlgmod\""));
-    return evaluate_shell(cstring_concat(cstring_concat(cstring_concat(cstring_concat(
-    cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat("\"", [[[NSBundle mainBundle] resourcePath]
-    UTF8String]), "/dlgmod\" --"), (mselect) ? "get-open-filenames-ext \"" : "get-open-filename-ext \""), escquotes(filter)),
-    "\" \""), escquotes(fname)), "\" \""), escquotes(dir)), "\" \""), escquotes((strcmp(title, "") == 0) ? "Open" : title)), "\""));
+
+  NSOpenPanel *oFilePanel = [NSOpenPanel openPanel];
+  [oFilePanel setMessage:[NSString stringWithUTF8String:title]];
+  [oFilePanel setDirectoryURL:[NSURL fileURLWithPath:[NSString stringWithUTF8String:dir]]];
+  [oFilePanel setCanChooseFiles:YES];
+  [oFilePanel setCanChooseDirectories:NO];
+  [oFilePanel setCanCreateDirectories:NO];
+  [oFilePanel setResolvesAliases:YES];
+
+  if (mselect)
+    [oFilePanel setAllowsMultipleSelection:YES];
+  else
+    [oFilePanel setAllowsMultipleSelection:NO];
+
+  NSView *openView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 431, 21)];
+  NSPopUpButton *openPop = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(104, 0, 255, 22)];
+  NSString *openFilter = [NSString stringWithUTF8String:filter];
+  bool openShowAccessory = true;
+  bool openAllowAllFiles = false;
+
+  if ([openFilter length] == 0 ||
+    ([openFilter rangeOfString:@"|"].location != NSNotFound &&
+    [openFilter rangeOfString:@"|"].location == 0))
+    openShowAccessory = false;
+
+  if ([openFilter length] == 0 ||
+    [openFilter rangeOfString:@"|"].location == NSNotFound) {
+    openFilter = [openFilter stringByAppendingString:@"|"];
+    openAllowAllFiles = true;
   }
-  static string result;
-  if (mselect) result = ngs::imgui::get_open_filenames_ext(filter, fname, dir, title);
-  else result = ngs::imgui::get_open_filename_ext(filter, fname, dir, ((strcmp(title, "") == 0) ? "Open" : title));
-  return result.c_str();
+
+  int openIndex = 0;
+  int openCount = 0, openLength = [openFilter length];
+  NSRange openRange = NSMakeRange(0, openLength);
+
+  while (openRange.location != NSNotFound) {
+    openRange = [openFilter rangeOfString: @"|" options:0 range:openRange];
+
+    if (openRange.location != NSNotFound) {
+      openRange = NSMakeRange(openRange.location + openRange.length, openLength - (openRange.location + openRange.length));
+      openCount += 1;
+    }
+  }
+
+  NSString *openPattern = openFilter;
+  openPattern = [openPattern stringByReplacingOccurrencesOfString:@"*." withString:@""];
+  openPattern = [openPattern stringByReplacingOccurrencesOfString:@" " withString:@""];
+
+  NSArray *openArray1 = [openFilter componentsSeparatedByString:@"|"];
+  NSArray *openArray2 = [openPattern componentsSeparatedByString:@"|"];
+  NSMutableArray *openPatternArray = [[NSMutableArray alloc] init];
+  NSMutableArray *openDescrArray = [[NSMutableArray alloc] init];
+
+  for (openIndex = 0; openIndex <= openCount; openIndex += 1) {
+    if (openIndex % 2) {
+      [openPatternArray addObject:[openArray2 objectAtIndex:openIndex]];
+    } else {
+      [openDescrArray addObject:[openArray1 objectAtIndex:openIndex]];
+    }
+  }
+
+  selectedOpenPattern = [openPatternArray objectAtIndex:0];
+  openPatternItems = [selectedOpenPattern componentsSeparatedByString:@";"];
+
+  NSMutableArray<UTType *> *contentTypes = [[NSMutableArray alloc] init];
+
+  for (std::size_t i = 0; i < [openPatternItems count]; i++) {
+    NSString *ext = [openPatternItems objectAtIndex:i];
+    if (UTType *type = [UTType typeWithFilenameExtension:ext]) {
+      [contentTypes addObject:type];
+    }
+  }
+    
+  [oFilePanel setAllowedContentTypes:contentTypes];
+  [contentTypes release];
+
+  if ([openPatternItems containsObject:@"*"] || openAllowAllFiles || !openShowAccessory) {
+    [oFilePanel setAllowedContentTypes:@[]];
+  }
+
+  [openPop addItemsWithTitles:openDescrArray];
+  [openPop selectItemWithTitle:[openDescrArray objectAtIndex:0]];
+  [openView addSubview:openPop];
+  [oFilePanel setAccessoryView:openView];
+
+  if (!openShowAccessory)
+    [oFilePanel setAccessoryView:nullptr];
+
+  initOpenAccessory = false;
+  openPopIndex = 0;
+
+  [oFilePanel beginSheetModalForWindow:(NSWindow *)owner completionHandler:^(NSInteger result) {
+    if (result == NSModalResponseOK) {
+      NSURL *theOpenURL;
+      NSString *theOpenFile;
+      int openURLSize = [[oFilePanel URLs] count];
+
+      if (openURLSize > 1) {
+        NSMutableArray *openFileArray = [[NSMutableArray alloc] init];
+
+        for (int openURLIndex = 0; openURLIndex < openURLSize; openURLIndex += 1) {
+          [openFileArray addObject:[[[oFilePanel URLs] objectAtIndex:openURLIndex] path]];
+        }
+
+        theOpenFile = [openFileArray componentsJoinedByString:@"\n"];
+        [openFileArray release];
+      } else
+        theOpenFile = [[[oFilePanel URLs] objectAtIndex:0] path];
+
+      theOpenResult = [theOpenFile UTF8String];
+    }
+
+  }];
+
+  NSModalSession openSession = [NSApp beginModalSessionForWindow:oFilePanel];
+
+  for (;;) {
+
+    if ([NSApp runModalSession:openSession] != NSModalResponseContinue)
+      break;
+
+    if (![oFilePanel isAccessoryViewDisclosed] && !initOpenAccessory) {
+      [oFilePanel setAccessoryViewDisclosed:YES];
+      initOpenAccessory = true;
+    }
+
+    if (openShowAccessory) {
+        if ([openPop indexOfSelectedItem] != openPopIndex) {
+            selectedOpenPattern = [openPatternArray objectAtIndex:[openPop indexOfSelectedItem]];
+            openPatternItems = [selectedOpenPattern componentsSeparatedByString:@";"];
+            
+        if ([openPatternItems containsObject:@"*"]) {
+          [oFilePanel setAllowedContentTypes:@[]];
+        } else {
+          NSMutableArray<UTType *> *contentTypes = [[NSMutableArray alloc] init];
+        
+          for (std::size_t i = 0; i < [openPatternItems count]; i++) {
+            NSString *ext = [openPatternItems objectAtIndex:i];
+            if (UTType *type = [UTType typeWithFilenameExtension:ext]) {
+              [contentTypes addObject:type];
+            }
+          }
+              
+          [oFilePanel setAllowedContentTypes:contentTypes];
+          [contentTypes release];
+        }
+
+        openPopIndex = [openPop indexOfSelectedItem];
+      }
+    }
+  }
+
+  [NSApp endModalSession:openSession];
+
+  [oFilePanel close];
+
+  [openPatternArray release];
+  [openDescrArray release];
+  [openPop release];
+  [openView release];
+
+  return theOpenResult.c_str();
 }
 
-const char *cocoa_get_save_filename(const char *filter, const char *fname, const char *dir, const char *title) {
+std::string theSaveResult;
+NSString *selectedSavePattern;
+NSArray *savePatternItems;
+int savePopIndex;
+const char *cocoa_get_save_filename(const char *filter, const char *fname, const char *dir, const char *title, bool async) {
   cancel_pressed = false;
-  if (![NSThread isMainThread]) {
-    evaluate_shell(cstring_concat(cstring_concat("chmod +x \"", escquotes([[[NSBundle mainBundle] resourcePath] UTF8String])), "/dlgmod\""));
-    return evaluate_shell(cstring_concat(cstring_concat(cstring_concat(cstring_concat(
-    cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat("\"", [[[NSBundle mainBundle] resourcePath]
-    UTF8String]), "/dlgmod\" --"), "get-save-filename-ext \""), escquotes(filter)), "\" \""), escquotes(fname)), "\" \""), escquotes(dir)),
-    "\" \""), escquotes((strcmp(title, "") == 0) ? "Save As" : title)), "\""));
+
+  NSSavePanel *sFilePanel = [NSSavePanel savePanel];
+  [sFilePanel setMessage:[NSString stringWithUTF8String:title]];
+  [sFilePanel setDirectoryURL:[NSURL fileURLWithPath:[NSString stringWithUTF8String:dir]]];
+  [sFilePanel setNameFieldStringValue:[[[NSString stringWithUTF8String:fname] lastPathComponent] stringByDeletingPathExtension]];
+  [sFilePanel setCanCreateDirectories:YES];
+
+  NSView *saveView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 433, 21)];
+  NSPopUpButton *savePop = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(105, 0, 255, 22)];
+  NSString *saveFilter = [NSString stringWithUTF8String:filter];
+  bool saveShowAccessory = true;
+  bool saveAllowAllFiles = false;
+
+  if ([saveFilter length] == 0 ||
+    ([saveFilter rangeOfString:@"|"].location != NSNotFound &&
+    [saveFilter rangeOfString:@"|"].location == 0))
+    saveShowAccessory = false;
+
+  if ([saveFilter length] == 0 ||
+    [saveFilter rangeOfString:@"|"].location == NSNotFound) {
+    saveFilter = [saveFilter stringByAppendingString:@"|"];
+    saveAllowAllFiles = true;
   }
-  static string result;
-  result = ngs::imgui::get_save_filename_ext(filter, fname, dir, ((strcmp(title, "") == 0) ? "Save As" : title));
-  return result.c_str();
+
+  int saveIndex = 0;
+  int saveCount = 0, saveLength = [saveFilter length];
+  NSRange saveRange = NSMakeRange(0, saveLength);
+
+  while (saveRange.location != NSNotFound) {
+    saveRange = [saveFilter rangeOfString: @"|" options:0 range:saveRange];
+
+    if (saveRange.location != NSNotFound) {
+      saveRange = NSMakeRange(saveRange.location + saveRange.length, saveLength - (saveRange.location + saveRange.length));
+      saveCount += 1;
+    }
+  }
+
+  NSString *savePattern = saveFilter;
+  savePattern = [savePattern stringByReplacingOccurrencesOfString:@"*." withString:@""];
+  savePattern = [savePattern stringByReplacingOccurrencesOfString:@" " withString:@""];
+
+  NSArray *saveArray1 = [saveFilter componentsSeparatedByString:@"|"];
+  NSArray *saveArray2 = [savePattern componentsSeparatedByString:@"|"];
+  NSMutableArray *savePatternArray = [[NSMutableArray alloc] init];
+  NSMutableArray *saveDescrArray = [[NSMutableArray alloc] init];
+
+  for (saveIndex = 0; saveIndex <= saveCount; saveIndex += 1) {
+    if (saveIndex % 2) {
+      [savePatternArray addObject:[saveArray2 objectAtIndex:saveIndex]];
+    } else {
+      [saveDescrArray addObject:[saveArray1 objectAtIndex:saveIndex]];
+    }
+  }
+
+  selectedSavePattern = [savePatternArray objectAtIndex:0];
+  savePatternItems = [selectedSavePattern componentsSeparatedByString:@";"];
+
+  NSMutableArray<UTType *> *contentTypes = [[NSMutableArray alloc] init];
+
+  for (std::size_t i = 0; i < [savePatternItems count]; i++) {
+    NSString *ext = [savePatternItems objectAtIndex:i];
+    if (UTType *type = [UTType typeWithFilenameExtension:ext]) {
+      [contentTypes addObject:type];
+    }
+  }
+          
+  [sFilePanel setAllowedContentTypes:contentTypes];
+  [contentTypes release];
+
+  if ([savePatternItems containsObject:@"*"] || saveAllowAllFiles || !saveShowAccessory) {
+    [sFilePanel setAllowedContentTypes:@[]];
+  }
+
+  [savePop addItemsWithTitles:saveDescrArray];
+  [savePop selectItemWithTitle:[saveDescrArray objectAtIndex:0]];
+  [saveView addSubview:savePop];
+  [sFilePanel setAccessoryView:saveView];
+
+  if (!saveShowAccessory)
+    [sFilePanel setAccessoryView:nullptr];
+
+  savePopIndex = 0;
+
+  [sFilePanel beginSheetModalForWindow:(NSWindow *)owner completionHandler:^(NSInteger result) {
+    
+    if (result == NSModalResponseOK) {
+      NSURL *theSaveURL = [sFilePanel URL];
+      NSString *theSaveFile = [theSaveURL path];
+      theSaveResult = [theSaveFile UTF8String];
+    }
+    
+  }];
+
+  NSModalSession saveSession = [NSApp beginModalSessionForWindow:sFilePanel];
+    
+  for (;;) {
+
+    if ([NSApp runModalSession:saveSession] != NSModalResponseContinue)
+      break;
+    
+    if (saveShowAccessory) {
+      if ([savePop indexOfSelectedItem] != savePopIndex) {
+        selectedSavePattern = [savePatternArray objectAtIndex:[savePop indexOfSelectedItem]];
+        savePatternItems = [selectedSavePattern componentsSeparatedByString:@";"];
+
+        if ([savePatternItems containsObject:@"*"]) {
+          [sFilePanel setAllowedContentTypes:@[]];
+        } else {
+          NSMutableArray<UTType *> *contentTypes = [[NSMutableArray alloc] init];
+
+          for (std::size_t i = 0; i < [savePatternItems count]; i++) {
+            NSString *ext = [savePatternItems objectAtIndex:i];
+            if (UTType *type = [UTType typeWithFilenameExtension:ext]) {
+              [contentTypes addObject:type];
+            }
+          }
+                
+          [sFilePanel setAllowedContentTypes:contentTypes];
+          [contentTypes release];
+        }
+
+        savePopIndex = [savePop indexOfSelectedItem];
+      }
+    }
+
+  }
+
+  [NSApp endModalSession:saveSession];
+
+  [sFilePanel close];
+
+  [savePatternArray release];
+  [saveDescrArray release];
+  [savePop release];
+  [saveView release];
+
+  return theSaveResult.c_str();
 }
 
-const char *cocoa_get_directory(const char *capt, const char *root) {
+std::string theFolderResult;
+const char *cocoa_get_directory(const char *capt, const char *root, bool async) {
   cancel_pressed = false;
-  if (![NSThread isMainThread]) {
-    evaluate_shell(cstring_concat(cstring_concat("chmod +x \"", escquotes([[[NSBundle mainBundle] resourcePath] UTF8String])), "/dlgmod\""));
-    return evaluate_shell(cstring_concat(cstring_concat(
-    cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat("\"", [[[NSBundle mainBundle] resourcePath]
-    UTF8String]), "/dlgmod\" --"), "get-directory-alt \""), escquotes((strcmp(capt, "") == 0) ? "Select Directory" : capt)), "\" \""), escquotes(root)), "\""));
-  }
-  static string result;
-  result = ngs::imgui::get_directory_alt(((strcmp(capt, "") == 0) ? "Select Directory" : capt), root);
-  return result.c_str();
+
+  NSOpenPanel *dirPanel = [NSOpenPanel openPanel];
+  [dirPanel setMessage:[NSString stringWithUTF8String:capt]];
+  [dirPanel setDirectoryURL:[NSURL fileURLWithPath:[NSString stringWithUTF8String:root]]];
+  [dirPanel setCanChooseFiles:NO];
+  [dirPanel setCanChooseDirectories:YES];
+  [dirPanel setCanCreateDirectories:YES];
+  [dirPanel setAllowsMultipleSelection:NO];
+  [dirPanel setResolvesAliases:YES];
+
+  [dirPanel beginSheetModalForWindow:(NSWindow *)owner completionHandler:^(NSInteger result) {
+
+    if (result == NSModalResponseOK) {
+      NSURL *theFolderURL = [[dirPanel URLs] objectAtIndex:0];
+      NSString *theFolderPath = [[theFolderURL path] stringByAppendingString:@"/"];
+      theFolderPath = [theFolderPath stringByReplacingOccurrencesOfString:@"//" withString:@"/"];
+      theFolderResult = [theFolderPath UTF8String];
+      [NSApp stopModal];
+    } else if (result == NSModalResponseCancel) {
+      [NSApp stopModal];
+    }
+
+  }];
+    
+  [NSApp runModalForWindow:dirPanel];
+
+  [dirPanel close];
+
+  return theFolderResult.c_str();
 }
 
-int cocoa_get_color(int defcol, const char *title) {
+int rescol;
+bool colorOKPressed;
+int cocoa_get_color(int defcol, const char *title, bool async) {
   cancel_pressed = false;
-  if (![NSThread isMainThread]) {
-    evaluate_shell(cstring_concat(cstring_concat("chmod +x \"", escquotes([[[NSBundle mainBundle] resourcePath] UTF8String])), "/dlgmod\""));
-    return cstring_to_integer(evaluate_shell(cstring_concat(cstring_concat(
-    cstring_concat(cstring_concat(cstring_concat(cstring_concat(cstring_concat("\"", [[[NSBundle mainBundle] resourcePath]
-    UTF8String]), "/dlgmod\" --"), "get-color-ext \""), integer_to_cstring(defcol)), "\" \""), escquotes(title)), "\"")));
-  }
 
   int redValue = defcol & 0xFF;
   int greenValue = (defcol >> 8) & 0xFF;
@@ -492,7 +744,6 @@ int cocoa_get_color(int defcol, const char *title) {
   myViewView.autoresizingMask = NSViewWidthSizable | NSViewMinXMargin;
   myButtonView.autoresizingMask = NSViewMinXMargin;
 
-  NSModalSession colorSession = [NSApp beginModalSessionForWindow:myColorPanel];
   [myColorPanel setFrame:NSMakeRect(0, 0, 229, 399 + buttonHeight) display:YES animate:NO];
   [myColorPanel center];
 
@@ -502,33 +753,37 @@ int cocoa_get_color(int defcol, const char *title) {
   NSString *redHexValue, *greenHexValue, *blueHexValue;
   NSColor *convertedColor;
 
-  int rescol = -1;
-  bool colorOKPressed = false;
+  rescol = -1;
+  colorOKPressed = false;
+
+  [(NSWindow *)owner beginSheet:myColorPanel completionHandler:^(NSInteger result) {
+
+  }];
+
+  NSModalSession colorSession = [NSApp beginModalSessionForWindow:myColorPanel];
 
   for (;;) {
-    if ([NSApp runModalSession:colorSession] != NSModalResponseContinue)
-      break;
-    
-    if ([[myColorPanel standardWindowButton:NSWindowCloseButton] state] == NSControlStateValueOn) {
-      [[myColorPanel standardWindowButton:NSWindowCloseButton] setState:NSControlStateValueOff];
-      [NSApp endModalSession:colorSession];
+
+    if ([NSApp runModalSession:colorSession] != NSModalResponseContinue) {
       break;
     }
 
+    if ([[myColorPanel standardWindowButton:NSWindowCloseButton] state] == NSControlStateValueOn)
+      [[myColorPanel standardWindowButton:NSWindowCloseButton] setState:NSControlStateValueOff];
+
     if ([myOKButton state] == NSControlStateValueOn) {
-      [NSApp endModalSession:colorSession];
       colorOKPressed = true;
-      [myColorPanel close];
       break;
     }
 
     if ([myCancelButton state] == NSControlStateValueOn) {
-      [NSApp endModalSession:colorSession];
-      [myColorPanel close];
       break;
     }
+
   }
 
+  [NSApp endModalSession:colorSession];
+    
   if (colorOKPressed) {
     myColor = [myColorPanel color];
     convertedColor = [myColor colorUsingType:NSColorTypeComponentBased];
@@ -540,11 +795,12 @@ int cocoa_get_color(int defcol, const char *title) {
       blueIntValue = (int)(b * 255);
 
       rescol = (redIntValue & 0xFF) + ((greenIntValue & 0xFF) << 8) + ((blueIntValue & 0xFF) << 16);
-      [myColorPanel close];
     }
   }
 
   [myColorPanel setContentView:oldView];
+  
+  [myColorPanel close];
 
   [oldView release];
   [colorView release];
@@ -555,10 +811,6 @@ int cocoa_get_color(int defcol, const char *title) {
   [parentView release];
 
   return rescol;
-}
-
-const char *cocoa_widget_get_button_name(int type) {
-  return dialog_module::widget_get_button_name(type);
 }
 
 namespace dialog_module {
@@ -595,51 +847,50 @@ namespace dialog_module {
     
   } // anonymous namespace
   
-  int show_message(char *str) {
+  int show_message(char *str, bool async) {
     string str_str = str;
-    return cocoa_show_message(str_str.c_str(), false, current_icon.c_str(), (caption == "") ? "Information" : caption.c_str());
+    return cocoa_show_message(str_str.c_str(), false, current_icon.c_str(), (caption.empty()) ? "Information" : caption.c_str(), async);
   }
   
-  int show_message_cancelable(char *str) {
+  int show_message_cancelable(char *str, bool async) {
     string str_str = str;
-    return cocoa_show_message(str_str.c_str(), true, current_icon.c_str(), (caption == "") ? "Question" : caption.c_str());
+    return cocoa_show_message(str_str.c_str(), true, current_icon.c_str(), (caption.empty()) ? "Question" : caption.c_str(), async);
   }
   
-  int show_question(char *str) {
+  int show_question(char *str, bool async) {
     string str_str = str;
-    return cocoa_show_question(str_str.c_str(), false, current_icon.c_str(), (caption == "") ? "Question" : caption.c_str());
+    return cocoa_show_question(str_str.c_str(), false, current_icon.c_str(), (caption.empty()) ? "Question" : caption.c_str(), async);
   }
   
-  int show_question_cancelable(char *str) {
+  int show_question_cancelable(char *str, bool async) {
     string str_str = str;
-    return cocoa_show_question(str_str.c_str(), true, current_icon.c_str(), (caption == "") ? "Question" : caption.c_str());
+    return cocoa_show_question(str_str.c_str(), true, current_icon.c_str(), (caption.empty()) ? "Question" : caption.c_str(), async);
   }
   
-  int show_attempt(char *str) {
+  int show_attempt(char *str, bool async) {
     string str_str = str;
-    return cocoa_show_attempt(str_str.c_str(), current_icon.c_str(), (caption == "") ? "Error" : caption.c_str());
+    return cocoa_show_attempt(str_str.c_str(), current_icon.c_str(), (caption.empty()) ? "Error" : caption.c_str(), async);
   }
   
-  int show_error(char *str, bool abort) {
+  int show_error(char *str, bool abort, bool async) {
     string str_str = str;
-    int result = cocoa_show_error(str_str.c_str(), abort, current_icon.c_str(), (caption == "") ? "Error" : caption.c_str());
-    if (result == 1) exit(0);
+    int result = cocoa_show_error(str_str.c_str(), abort, current_icon.c_str(), (caption.empty()) ? "Error" : caption.c_str(), async);
     return result;
   }
   
-  char *get_string(char *str, char *def) {
+  char *get_string(char *str, char *def, bool async) {
     string str_str = str;
     string str_def = def;
-    return (char *)cocoa_input_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption == "") ? "Input Query" : caption.c_str(), false);
+    return (char *)cocoa_input_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption.empty()) ? "Input Query" : caption.c_str(), false, async);
   }
   
-  char *get_password(char *str, char *def) {
+  char *get_password(char *str, char *def, bool async) {
     string str_str = str;
     string str_def = def;
-    return (char *)cocoa_password_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption == "") ? "Input Query" : caption.c_str(), false);
+    return (char *)cocoa_password_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption.empty()) ? "Input Query" : caption.c_str(), false, async);
   }
   
-  double get_integer(char *str, double def) {
+  double get_integer(char *str, double def, bool async) {
     double DIGITS_MIN = -999999999999999;
     double DIGITS_MAX = 999999999999999;
 
@@ -648,7 +899,7 @@ namespace dialog_module {
 
     string str_str = str;
     string str_def = remove_trailing_zeros(def);
-    double result = strtod(cocoa_input_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption == "") ? "Input Query" : caption.c_str(), true), nullptr);
+    double result = strtod(cocoa_input_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption.empty()) ? "Input Query" : caption.c_str(), true, async), nullptr);
 
     if (result < DIGITS_MIN) result = DIGITS_MIN;
     if (result > DIGITS_MAX) result = DIGITS_MAX;
@@ -656,7 +907,7 @@ namespace dialog_module {
     return result;
   }
   
-  double get_passcode(char *str, double def) {
+  double get_passcode(char *str, double def, bool async) {
     double DIGITS_MIN = -999999999999999;
     double DIGITS_MAX = 999999999999999;
 
@@ -665,7 +916,7 @@ namespace dialog_module {
 
     string str_str = str;
     string str_def = remove_trailing_zeros(def);
-    double result = strtod(cocoa_password_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption == "") ? "Input Query" : caption.c_str(), true), nullptr);
+    double result = strtod(cocoa_password_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption.empty()) ? "Input Query" : caption.c_str(), true, async), nullptr);
 
     if (result < DIGITS_MIN) result = DIGITS_MIN;
     if (result > DIGITS_MAX) result = DIGITS_MAX;
@@ -673,64 +924,64 @@ namespace dialog_module {
     return result;
   }
   
-  char *get_open_filename(char *filter, char *fname) {
+  char *get_open_filename(char *filter, char *fname, bool async) {
     string str_filter = filter; string str_fname = fname; static string result;
-    result = cocoa_get_open_filename(str_filter.c_str(), str_fname.c_str(), "", "", false);
+    result = cocoa_get_open_filename(str_filter.c_str(), str_fname.c_str(), "", "", false, async);
     return (char *)result.c_str();
   }
   
-  char *get_open_filename_ext(char *filter, char *fname, char *dir, char *title) {
+  char *get_open_filename_ext(char *filter, char *fname, char *dir, char *title, bool async) {
     string str_filter = filter; string str_fname = fname;
     string str_dir = dir; string str_title = title; static string result;
-    result = cocoa_get_open_filename(str_filter.c_str(), str_fname.c_str(), str_dir.c_str(), str_title.c_str(), false);
+    result = cocoa_get_open_filename(str_filter.c_str(), str_fname.c_str(), str_dir.c_str(), str_title.c_str(), false, async);
     return (char *)result.c_str();
   }
   
-  char *get_open_filenames(char *filter, char *fname) {
+  char *get_open_filenames(char *filter, char *fname, bool async) {
     string str_filter = filter; string str_fname = fname; static string result;
-    result = cocoa_get_open_filename(str_filter.c_str(), str_fname.c_str(), "", "", true);
+    result = cocoa_get_open_filename(str_filter.c_str(), str_fname.c_str(), "", "", true, async);
     return (char *)result.c_str();
   }
   
-  char *get_open_filenames_ext(char *filter, char *fname, char *dir, char *title) {
+  char *get_open_filenames_ext(char *filter, char *fname, char *dir, char *title, bool async) {
     string str_filter = filter; string str_fname = fname;
     string str_dir = dir; string str_title = title; static string result;
-    result = cocoa_get_open_filename(str_filter.c_str(), str_fname.c_str(), str_dir.c_str(), str_title.c_str(), true);
+    result = cocoa_get_open_filename(str_filter.c_str(), str_fname.c_str(), str_dir.c_str(), str_title.c_str(), true, async);
     return (char *)result.c_str();
   }
   
-  char *get_save_filename(char *filter, char *fname) {
+  char *get_save_filename(char *filter, char *fname, bool async) {
     string str_filter = filter; string str_fname = fname; static string result;
-    result = cocoa_get_save_filename(str_filter.c_str(), str_fname.c_str(), "", "");
+    result = cocoa_get_save_filename(str_filter.c_str(), str_fname.c_str(), "", "", async);
     return (char *)result.c_str();
   }
   
-  char *get_save_filename_ext(char *filter, char *fname, char *dir, char *title) {
+  char *get_save_filename_ext(char *filter, char *fname, char *dir, char *title, bool async) {
     string str_filter = filter; string str_fname = fname;
     string str_dir = dir; string str_title = title; static string result;
-    result = cocoa_get_save_filename(str_filter.c_str(), str_fname.c_str(), str_dir.c_str(), str_title.c_str());
+    result = cocoa_get_save_filename(str_filter.c_str(), str_fname.c_str(), str_dir.c_str(), str_title.c_str(), async);
     return (char *)result.c_str();
   }
   
-  char *get_directory(char *dname) {
+  char *get_directory(char *dname, bool async) {
     string str_dname = dname;  static string result;
-    result = cocoa_get_directory("", str_dname.c_str());
+    result = cocoa_get_directory("", str_dname.c_str(), async);
     return (char *)result.c_str();
   }
   
-  char *get_directory_alt(char *capt, char *root) {
+  char *get_directory_alt(char *capt, char *root, bool async) {
     string str_dname = root; string str_title = capt; static string result;
-    result = cocoa_get_directory(str_title.c_str(), str_dname.c_str());
+    result = cocoa_get_directory(str_title.c_str(), str_dname.c_str(), async);
     return (char *)result.c_str();
   }
   
-  int get_color(int defcol) {
-    return cocoa_get_color(defcol, "");
+  int get_color(int defcol, bool async) {
+    return cocoa_get_color(defcol, "", async);
   }
   
-  int get_color_ext(int defcol, char *title) {
+  int get_color_ext(int defcol, char *title, bool async) {
     string str_title = title;
-    return cocoa_get_color(defcol, str_title.c_str());
+    return cocoa_get_color(defcol, str_title.c_str(), async);
   }
   
   char *widget_get_caption() {
@@ -766,43 +1017,12 @@ namespace dialog_module {
   }
 
   void widget_set_button_name(int type, char *name) {
-    string path = (getenv("TMPDIR") ? : "/tmp");
-    path += "/" + string(cocoa_get_bundle_id()) + "/";
-    string fname1 = path + "libdlgmod.ini";
-    string fname2 = path + "libdlgmod.tmp";
-    mkdir(path.c_str(), 0777);
-    std::ofstream ostrm;
-    ostrm.open(fname2);
-    if (ostrm) {
-      ostrm << "[buttons]\n" <<
-        "btn_abort = " << ((type == 0) ? name : widget_get_button_name(BUTTON_ABORT)) << "\n" <<
-        "btn_ignore = " << ((type == 1) ? name : widget_get_button_name(BUTTON_IGNORE)) << "\n" <<
-        "btn_ok = " << ((type == 2) ? name : widget_get_button_name(BUTTON_OK)) << "\n" <<
-        "btn_cancel = " << ((type == 3) ? name : widget_get_button_name(BUTTON_CANCEL)) << "\n" <<
-        "btn_yes = " << ((type == 4) ? name : widget_get_button_name(BUTTON_YES)) << "\n" <<
-        "btn_no = " << ((type == 5) ? name : widget_get_button_name(BUTTON_NO)) << "\n" <<
-        "btn_retry = " << ((type == 6) ? name : widget_get_button_name(BUTTON_RETRY)) << "\n";
-    }
-    if (file_exists(fname1))
-      std::remove(fname1.c_str());
-    std::rename(fname2.c_str(), fname1.c_str());
+    string str_name = name;
+    btn_array[type] = str_name;
   }
 
   char *widget_get_button_name(int type) {
-    string path = (getenv("TMPDIR") ? : "/tmp");
-    path += "/" + string(cocoa_get_bundle_id()) + "/";
-    string fname = path + "libdlgmod.ini";
-    if (file_exists(fname)) {
-      config cfg(fname);
-      btn_array[BUTTON_ABORT] = cfg.get_value("buttons", "btn_abort");
-      btn_array[BUTTON_IGNORE] = cfg.get_value("buttons", "btn_ignore");
-      btn_array[BUTTON_OK] = cfg.get_value("buttons", "btn_ok");
-      btn_array[BUTTON_CANCEL] = cfg.get_value("buttons", "btn_cancel");
-      btn_array[BUTTON_YES] = cfg.get_value("buttons", "btn_yes");
-      btn_array[BUTTON_NO] = cfg.get_value("buttons", "btn_no");
-      btn_array[BUTTON_RETRY] = cfg.get_value("buttons", "btn_retry");
-    }
-    return (char *)btn_array[(int)type].c_str();
+    return (char *)btn_array[type].c_str();
   }
 
   bool widget_get_canceled() {

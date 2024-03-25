@@ -8,15 +8,13 @@ A simple, easy-to-use, cross-platform, dialog API, inspired by the GameMaker Lan
 
 # Platforms Supported and Features Included
 
-Windows, macOS, Linux, FreeBSD, and DragonFlyBSD are supported. Linux, FreeBSD, and DragonFlyBSD versions have dependencies. Includes Message Box with OK, OK/Cancel, Yes/No, Yes/No/Cancel, Retry/Cancel, Abort, Abort/Ignore, Input Box for strings and numbers, Password Box for strings and numbers, Open File, Multi-Select Files, Save File, Folder Browser, and Color Picker. The File Dialogs support Multiple Filters, each of which, may be selected from a drop-down menu. Running these functions outside the main thread on macOS requires the `dlgmod` CLI executable be downloaded, with the quarantine attribute removed, and placed in your Application Bundle's Resources folder. You may view and/or download its source code from the official `dlgmod` repository:
-
-https://github.com/time-killer-games/dlgmod
+Supports Windows, macOS, Linux, FreeBSD, DragonFly BSD, NetBSD, OpenBSD, and SunOS. Linux, FreeBSD, DragonFly BSD, NetBSD, OpenBSD, and SunOS versions require either zenity or kdialog being installed on the target system. Includes Message Box with OK, OK/Cancel, Yes/No, Yes/No/Cancel, Retry/Cancel, Abort, Abort/Ignore, Input Box for strings and numbers, Password Box for strings and numbers, Open File, Multi-Select Files, Save File, Folder Browser, and Color Picker. The File Dialogs support Multiple Filters, each of which, may be selected from a drop-down menu.
 
 ----------------------------------------------------------------------------------------------------------------------------------
 
 # Dependency Option 1: GTK (Zenity)
 
-Debian-based Linux distributions: sudo apt-get install zenity
+Debian-based Linux distributions: sudo apt install zenity
 
 RedHat-based Linux distributions: sudo yum install zenity
 
@@ -28,7 +26,7 @@ FreeBSD-based BSD distributions: sudo pkg install zenity
 
 # Dependency Option 2: Qt (KDialog)
 
-Debian-based Linux distributions: sudo apt-get install kdialog
+Debian-based Linux distributions: sudo apt install kdialog
 
 RedHat-based Linux distributions: sudo yum install kdialog
 
@@ -40,11 +38,9 @@ FreeBSD-based BSD distributions: sudo pkg install kdialog
 
 # GameMaker Studio 2 Extension | Documentation
 
-Also available from the GameMaker Marketplace and itch.io:
+Also available from itch.io:
 
-https://marketplace.yoyogames.com/assets/6621/dialog-module
-
-https://samuel-venable.itch.io/dialog-module
+https://samuel-venable.itch.io/gamemaker-extension-collection
 
 Documentation for all of the functions included can be found here:
 

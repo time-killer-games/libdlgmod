@@ -26,6 +26,28 @@
 
 namespace dialog_module {
 
+  #if (defined(__APPLE__) && defined(__MACH__))
+  int show_message(char *str, bool async = false);
+  int show_message_cancelable(char *str, bool async = false);
+  int show_question(char *str, bool async = false);
+  int show_question_cancelable(char *str, bool async = false);
+  int show_attempt(char *str, bool async = false);
+  int show_error(char *str, bool abort, bool async = false);
+  char *get_string(char *str, char *def, bool async = false);
+  char *get_password(char *str, char *def, bool async = false);
+  double get_integer(char *str, double def, bool async = false);
+  double get_passcode(char *str, double def, bool async = false);
+  char *get_open_filename(char *filter, char *fname, bool async = false);
+  char *get_open_filename_ext(char *filter, char *fname, char *dir, char *title, bool async = false);
+  char *get_open_filenames(char *filter, char *fname, bool async = false);
+  char *get_open_filenames_ext(char *filter, char *fname, char *dir, char *title, bool async = false);
+  char *get_save_filename(char *filter, char *fname, bool async = false);
+  char *get_save_filename_ext(char *filter, char *fname, char *dir, char *title, bool async = false);
+  char *get_directory(char *dname, bool async = false);
+  char *get_directory_alt(char *capt, char *root, bool async = false);
+  int get_color(int defcol, bool async = false);
+  int get_color_ext(int defcol, char *title, bool async = false);
+  #else
   int show_message(char *str);
   int show_message_cancelable(char *str);
   int show_question(char *str);
@@ -46,6 +68,7 @@ namespace dialog_module {
   char *get_directory_alt(char *capt, char *root);
   int get_color(int defcol);
   int get_color_ext(int defcol, char *title);
+  #endif
   char *widget_get_caption();
   void widget_set_caption(char *str);
   char *widget_get_owner();
