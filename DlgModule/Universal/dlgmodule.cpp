@@ -350,9 +350,9 @@ void get_directory_alt_threaded(char *capt, char *root, unsigned id) {
 
 void get_color_threaded(double defcol, unsigned id) {
   #if (defined(__APPLE__) && defined(__MACH__))
-  double result = dialog_module::get_color(defcol, true);
+  double result = dialog_module::get_color((int)defcol, true);
   #else
-  double result = dialog_module::get_color(defcol);
+  double result = dialog_module::get_color((int)defcol);
   #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
@@ -364,9 +364,9 @@ void get_color_threaded(double defcol, unsigned id) {
 
 void get_color_ext_threaded(double defcol, char *title, unsigned id) {
   #if (defined(__APPLE__) && defined(__MACH__))
-  double result = dialog_module::get_color_ext(defcol, title, true);
+  double result = dialog_module::get_color_ext((int)defcol, title, true);
   #else
-  double result = dialog_module::get_color_ext(defcol, title);
+  double result = dialog_module::get_color_ext((int)defcol, title);
   #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
