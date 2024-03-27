@@ -81,7 +81,7 @@ const char *cocoa_widget_get_button_name(int type) {
   return dialog_module::widget_get_button_name(type);
 }
 
-int cocoa_show_message(const char *str, bool has_cancel, const char *icon, const char *title, bool async) {
+int cocoa_show_message(const char *str, bool has_cancel, const char *icon, const char *title) {
   cancel_pressed = false;
 
   NSString *myTitle = [NSString stringWithUTF8String:title];
@@ -118,7 +118,7 @@ int cocoa_show_message(const char *str, bool has_cancel, const char *icon, const
   return msgres;
 }
 
-int cocoa_show_question(const char *str, bool has_cancel, const char *icon, const char *title, bool async) {
+int cocoa_show_question(const char *str, bool has_cancel, const char *icon, const char *title) {
   cancel_pressed = false;
 
   NSString *myTitle = [NSString stringWithUTF8String:title];
@@ -161,7 +161,7 @@ int cocoa_show_question(const char *str, bool has_cancel, const char *icon, cons
   return qstres;
 }
 
-int cocoa_show_attempt(const char *str, const char *icon, const char *title, bool async) {
+int cocoa_show_attempt(const char *str, const char *icon, const char *title) {
   cancel_pressed = false;
 
   NSString *myStr = [NSString stringWithUTF8String:str];
@@ -200,7 +200,7 @@ int cocoa_show_attempt(const char *str, const char *icon, const char *title, boo
   return attemptres;
 }
 
-int cocoa_show_error(const char *str, bool _abort, const char *icon, const char *title, bool async) {
+int cocoa_show_error(const char *str, bool _abort, const char *icon, const char *title) {
   cancel_pressed = false;
 
   NSString *myStr = [NSString stringWithUTF8String:str];
@@ -238,7 +238,7 @@ int cocoa_show_error(const char *str, bool _abort, const char *icon, const char 
   return errorres;
 }
 
-const char *cocoa_input_box(const char *str, const char *def, const char *icon, const char *title, bool numbers, bool async) {
+const char *cocoa_input_box(const char *str, const char *def, const char *icon, const char *title, bool numbers) {
   cancel_pressed = false;
 
   NSString *myTitle = [NSString stringWithUTF8String:title];
@@ -290,7 +290,7 @@ const char *cocoa_input_box(const char *str, const char *def, const char *icon, 
   return strres.c_str();
 }
 
-const char *cocoa_password_box(const char *str, const char *def, const char *icon, const char *title, bool numbers, bool async) {
+const char *cocoa_password_box(const char *str, const char *def, const char *icon, const char *title, bool numbers) {
   cancel_pressed = false;
 
   NSString *myTitle = [NSString stringWithUTF8String:title];
@@ -347,7 +347,7 @@ bool initOpenAccessory;
 NSString *selectedOpenPattern;
 int openPopIndex;
 NSArray *openPatternItems;
-const char *cocoa_get_open_filename(const char *filter, const char *fname, const char *dir, const char *title, bool mselect, bool async) {
+const char *cocoa_get_open_filename(const char *filter, const char *fname, const char *dir, const char *title, bool mselect) {
   cancel_pressed = false;
 
   NSOpenPanel *oFilePanel = [NSOpenPanel openPanel];
@@ -517,7 +517,7 @@ std::string theSaveResult;
 NSString *selectedSavePattern;
 NSArray *savePatternItems;
 int savePopIndex;
-const char *cocoa_get_save_filename(const char *filter, const char *fname, const char *dir, const char *title, bool async) {
+const char *cocoa_get_save_filename(const char *filter, const char *fname, const char *dir, const char *title) {
   cancel_pressed = false;
 
   NSSavePanel *sFilePanel = [NSSavePanel savePanel];
@@ -659,7 +659,7 @@ const char *cocoa_get_save_filename(const char *filter, const char *fname, const
 }
 
 std::string theFolderResult;
-const char *cocoa_get_directory(const char *capt, const char *root, bool async) {
+const char *cocoa_get_directory(const char *capt, const char *root) {
   cancel_pressed = false;
 
   NSOpenPanel *dirPanel = [NSOpenPanel openPanel];
@@ -694,7 +694,7 @@ const char *cocoa_get_directory(const char *capt, const char *root, bool async) 
 
 int rescol;
 bool colorOKPressed;
-int cocoa_get_color(int defcol, const char *title, bool async) {
+int cocoa_get_color(int defcol, const char *title) {
   cancel_pressed = false;
 
   int redValue = defcol & 0xFF;
@@ -847,50 +847,50 @@ namespace dialog_module {
     
   } // anonymous namespace
   
-  int show_message(char *str, bool async) {
+  int show_message(char *str) {
     string str_str = str;
-    return cocoa_show_message(str_str.c_str(), false, current_icon.c_str(), (caption.empty()) ? "Information" : caption.c_str(), async);
+    return cocoa_show_message(str_str.c_str(), false, current_icon.c_str(), (caption.empty()) ? "Information" : caption.c_str());
   }
   
-  int show_message_cancelable(char *str, bool async) {
+  int show_message_cancelable(char *str) {
     string str_str = str;
-    return cocoa_show_message(str_str.c_str(), true, current_icon.c_str(), (caption.empty()) ? "Question" : caption.c_str(), async);
+    return cocoa_show_message(str_str.c_str(), true, current_icon.c_str(), (caption.empty()) ? "Question" : caption.c_str());
   }
   
-  int show_question(char *str, bool async) {
+  int show_question(char *str) {
     string str_str = str;
-    return cocoa_show_question(str_str.c_str(), false, current_icon.c_str(), (caption.empty()) ? "Question" : caption.c_str(), async);
+    return cocoa_show_question(str_str.c_str(), false, current_icon.c_str(), (caption.empty()) ? "Question" : caption.c_str());
   }
   
-  int show_question_cancelable(char *str, bool async) {
+  int show_question_cancelable(char *str) {
     string str_str = str;
-    return cocoa_show_question(str_str.c_str(), true, current_icon.c_str(), (caption.empty()) ? "Question" : caption.c_str(), async);
+    return cocoa_show_question(str_str.c_str(), true, current_icon.c_str(), (caption.empty()) ? "Question" : caption.c_str());
   }
   
-  int show_attempt(char *str, bool async) {
+  int show_attempt(char *str) {
     string str_str = str;
-    return cocoa_show_attempt(str_str.c_str(), current_icon.c_str(), (caption.empty()) ? "Error" : caption.c_str(), async);
+    return cocoa_show_attempt(str_str.c_str(), current_icon.c_str(), (caption.empty()) ? "Error" : caption.c_str());
   }
   
-  int show_error(char *str, bool abort, bool async) {
+  int show_error(char *str, bool abort) {
     string str_str = str;
-    int result = cocoa_show_error(str_str.c_str(), abort, current_icon.c_str(), (caption.empty()) ? "Error" : caption.c_str(), async);
+    int result = cocoa_show_error(str_str.c_str(), abort, current_icon.c_str(), (caption.empty()) ? "Error" : caption.c_str());
     return result;
   }
   
-  char *get_string(char *str, char *def, bool async) {
+  char *get_string(char *str, char *def) {
     string str_str = str;
     string str_def = def;
-    return (char *)cocoa_input_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption.empty()) ? "Input Query" : caption.c_str(), false, async);
+    return (char *)cocoa_input_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption.empty()) ? "Input Query" : caption.c_str(), false);
   }
   
-  char *get_password(char *str, char *def, bool async) {
+  char *get_password(char *str, char *def) {
     string str_str = str;
     string str_def = def;
-    return (char *)cocoa_password_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption.empty()) ? "Input Query" : caption.c_str(), false, async);
+    return (char *)cocoa_password_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption.empty()) ? "Input Query" : caption.c_str(), false);
   }
   
-  double get_integer(char *str, double def, bool async) {
+  double get_integer(char *str, double def) {
     double DIGITS_MIN = -999999999999999;
     double DIGITS_MAX = 999999999999999;
 
@@ -899,7 +899,7 @@ namespace dialog_module {
 
     string str_str = str;
     string str_def = remove_trailing_zeros(def);
-    double result = strtod(cocoa_input_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption.empty()) ? "Input Query" : caption.c_str(), true, async), nullptr);
+    double result = strtod(cocoa_input_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption.empty()) ? "Input Query" : caption.c_str(), true), nullptr);
 
     if (result < DIGITS_MIN) result = DIGITS_MIN;
     if (result > DIGITS_MAX) result = DIGITS_MAX;
@@ -907,7 +907,7 @@ namespace dialog_module {
     return result;
   }
   
-  double get_passcode(char *str, double def, bool async) {
+  double get_passcode(char *str, double def) {
     double DIGITS_MIN = -999999999999999;
     double DIGITS_MAX = 999999999999999;
 
@@ -916,7 +916,7 @@ namespace dialog_module {
 
     string str_str = str;
     string str_def = remove_trailing_zeros(def);
-    double result = strtod(cocoa_password_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption.empty()) ? "Input Query" : caption.c_str(), true, async), nullptr);
+    double result = strtod(cocoa_password_box(str_str.c_str(), str_def.c_str(), current_icon.c_str(), (caption.empty()) ? "Input Query" : caption.c_str(), true), nullptr);
 
     if (result < DIGITS_MIN) result = DIGITS_MIN;
     if (result > DIGITS_MAX) result = DIGITS_MAX;
@@ -924,64 +924,64 @@ namespace dialog_module {
     return result;
   }
   
-  char *get_open_filename(char *filter, char *fname, bool async) {
+  char *get_open_filename(char *filter, char *fname) {
     string str_filter = filter; string str_fname = fname; static string result;
-    result = cocoa_get_open_filename(str_filter.c_str(), str_fname.c_str(), "", "", false, async);
+    result = cocoa_get_open_filename(str_filter.c_str(), str_fname.c_str(), "", "", false);
     return (char *)result.c_str();
   }
   
-  char *get_open_filename_ext(char *filter, char *fname, char *dir, char *title, bool async) {
+  char *get_open_filename_ext(char *filter, char *fname, char *dir, char *title) {
     string str_filter = filter; string str_fname = fname;
     string str_dir = dir; string str_title = title; static string result;
-    result = cocoa_get_open_filename(str_filter.c_str(), str_fname.c_str(), str_dir.c_str(), str_title.c_str(), false, async);
+    result = cocoa_get_open_filename(str_filter.c_str(), str_fname.c_str(), str_dir.c_str(), str_title.c_str(), false);
     return (char *)result.c_str();
   }
   
-  char *get_open_filenames(char *filter, char *fname, bool async) {
+  char *get_open_filenames(char *filter, char *fname) {
     string str_filter = filter; string str_fname = fname; static string result;
-    result = cocoa_get_open_filename(str_filter.c_str(), str_fname.c_str(), "", "", true, async);
+    result = cocoa_get_open_filename(str_filter.c_str(), str_fname.c_str(), "", "", true);
     return (char *)result.c_str();
   }
   
-  char *get_open_filenames_ext(char *filter, char *fname, char *dir, char *title, bool async) {
+  char *get_open_filenames_ext(char *filter, char *fname, char *dir, char *title) {
     string str_filter = filter; string str_fname = fname;
     string str_dir = dir; string str_title = title; static string result;
-    result = cocoa_get_open_filename(str_filter.c_str(), str_fname.c_str(), str_dir.c_str(), str_title.c_str(), true, async);
+    result = cocoa_get_open_filename(str_filter.c_str(), str_fname.c_str(), str_dir.c_str(), str_title.c_str(), true);
     return (char *)result.c_str();
   }
   
-  char *get_save_filename(char *filter, char *fname, bool async) {
+  char *get_save_filename(char *filter, char *fname) {
     string str_filter = filter; string str_fname = fname; static string result;
-    result = cocoa_get_save_filename(str_filter.c_str(), str_fname.c_str(), "", "", async);
+    result = cocoa_get_save_filename(str_filter.c_str(), str_fname.c_str(), "", "");
     return (char *)result.c_str();
   }
   
-  char *get_save_filename_ext(char *filter, char *fname, char *dir, char *title, bool async) {
+  char *get_save_filename_ext(char *filter, char *fname, char *dir, char *title) {
     string str_filter = filter; string str_fname = fname;
     string str_dir = dir; string str_title = title; static string result;
-    result = cocoa_get_save_filename(str_filter.c_str(), str_fname.c_str(), str_dir.c_str(), str_title.c_str(), async);
+    result = cocoa_get_save_filename(str_filter.c_str(), str_fname.c_str(), str_dir.c_str(), str_title.c_str());
     return (char *)result.c_str();
   }
   
-  char *get_directory(char *dname, bool async) {
+  char *get_directory(char *dname) {
     string str_dname = dname;  static string result;
-    result = cocoa_get_directory("", str_dname.c_str(), async);
+    result = cocoa_get_directory("", str_dname.c_str());
     return (char *)result.c_str();
   }
   
-  char *get_directory_alt(char *capt, char *root, bool async) {
+  char *get_directory_alt(char *capt, char *root) {
     string str_dname = root; string str_title = capt; static string result;
-    result = cocoa_get_directory(str_title.c_str(), str_dname.c_str(), async);
+    result = cocoa_get_directory(str_title.c_str(), str_dname.c_str());
     return (char *)result.c_str();
   }
   
-  int get_color(int defcol, bool async) {
-    return cocoa_get_color(defcol, "", async);
+  int get_color(int defcol) {
+    return cocoa_get_color(defcol, "");
   }
   
-  int get_color_ext(int defcol, char *title, bool async) {
+  int get_color_ext(int defcol, char *title) {
     string str_title = title;
-    return cocoa_get_color(defcol, str_title.c_str(), async);
+    return cocoa_get_color(defcol, str_title.c_str());
   }
   
   char *widget_get_caption() {

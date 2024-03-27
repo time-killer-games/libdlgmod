@@ -103,11 +103,7 @@ std::string arg3;
 std::string arg4;
 
 void show_message_threaded(char *str, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  double result = dialog_module::show_message(str, true);
-  #else
   double result = dialog_module::show_message(str);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", result);
@@ -116,11 +112,7 @@ void show_message_threaded(char *str, unsigned id) {
 }
 
 void show_message_cancelable_threaded(char *str, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  double result = dialog_module::show_message_cancelable(str, true);
-  #else
   double result = dialog_module::show_message_cancelable(str);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", result);
@@ -129,11 +121,7 @@ void show_message_cancelable_threaded(char *str, unsigned id) {
 }
 
 void show_question_threaded(char *str, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  double result = dialog_module::show_question(str, true);
-  #else
   double result = dialog_module::show_question(str);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", result);
@@ -142,11 +130,7 @@ void show_question_threaded(char *str, unsigned id) {
 }
 
 void show_question_cancelable_threaded(char *str, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  double result = dialog_module::show_question_cancelable(str, true);
-  #else
   double result = dialog_module::show_question_cancelable(str);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", result);
@@ -155,11 +139,7 @@ void show_question_cancelable_threaded(char *str, unsigned id) {
 }
 
 void show_attempt_threaded(char *str, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  double result = dialog_module::show_attempt(str, true);
-  #else
   double result = dialog_module::show_attempt(str);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", result);
@@ -168,11 +148,7 @@ void show_attempt_threaded(char *str, unsigned id) {
 }
 
 void show_error_threaded(char *str, double abort, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  double result = dialog_module::show_error(str, abort, true);
-  #else
   double result = dialog_module::show_error(str, abort);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", result);
@@ -181,11 +157,7 @@ void show_error_threaded(char *str, double abort, unsigned id) {
 }
 
 void get_string_threaded(char *str, char *def, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  char *result = dialog_module::get_string(str, def, true);
-  #else
   char *result = dialog_module::get_string(str, def);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", ((!dialog_module::widget_get_canceled()) ? 1 : 0));
@@ -195,11 +167,7 @@ void get_string_threaded(char *str, char *def, unsigned id) {
 }
 
 void get_password_threaded(char *str, char *def, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  char *result = dialog_module::get_password(str, def, true);
-  #else
   char *result = dialog_module::get_password(str, def);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", ((!dialog_module::widget_get_canceled()) ? 1 : 0));
@@ -209,11 +177,7 @@ void get_password_threaded(char *str, char *def, unsigned id) {
 }
 
 void get_integer_threaded(char *str, double def, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  double result = dialog_module::get_integer(str, def, true);
-  #else
   double result = dialog_module::get_integer(str, def);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", ((!dialog_module::widget_get_canceled()) ? 1 : 0));
@@ -223,11 +187,7 @@ void get_integer_threaded(char *str, double def, unsigned id) {
 }
 
 void get_passcode_threaded(char *str, double def, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  double result = dialog_module::get_passcode(str, def, true);
-  #else
   double result = dialog_module::get_passcode(str, def);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", ((!dialog_module::widget_get_canceled()) ? 1 : 0));
@@ -237,11 +197,7 @@ void get_passcode_threaded(char *str, double def, unsigned id) {
 }
 
 void get_open_filename_threaded(char *filter, char *fname, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  char *result = dialog_module::get_open_filename(filter, fname, true);
-  #else
   char *result = dialog_module::get_open_filename(filter, fname);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -251,11 +207,7 @@ void get_open_filename_threaded(char *filter, char *fname, unsigned id) {
 }
 
 void get_open_filename_ext_threaded(char *filter, char *fname, char *dir, char *title, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  char *result = dialog_module::get_open_filename_ext(filter, fname, dir, title, true);
-  #else
   char *result = dialog_module::get_open_filename_ext(filter, fname, dir, title);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -265,11 +217,7 @@ void get_open_filename_ext_threaded(char *filter, char *fname, char *dir, char *
 }
 
 void get_open_filenames_threaded(char *filter, char *fname, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  char *result = dialog_module::get_open_filenames(filter, fname, true);
-  #else
   char *result = dialog_module::get_open_filenames(filter, fname);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -279,11 +227,7 @@ void get_open_filenames_threaded(char *filter, char *fname, unsigned id) {
 }
 
 void get_open_filenames_ext_threaded(char *filter, char *fname, char *dir, char *title, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  char *result = dialog_module::get_open_filenames_ext(filter, fname, dir, title, true);
-  #else
   char *result = dialog_module::get_open_filenames_ext(filter, fname, dir, title);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -293,11 +237,7 @@ void get_open_filenames_ext_threaded(char *filter, char *fname, char *dir, char 
 }
 
 void get_save_filename_threaded(char *filter, char *fname, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  char *result = dialog_module::get_save_filename(filter, fname, true);
-  #else
   char *result = dialog_module::get_save_filename(filter, fname);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -307,11 +247,7 @@ void get_save_filename_threaded(char *filter, char *fname, unsigned id) {
 }
 
 void get_save_filename_ext_threaded(char *filter, char *fname, char *dir, char *title, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  char *result = dialog_module::get_save_filename_ext(filter, fname, dir, title, true);
-  #else
   char *result = dialog_module::get_save_filename_ext(filter, fname, dir, title);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -321,11 +257,7 @@ void get_save_filename_ext_threaded(char *filter, char *fname, char *dir, char *
 }
 
 void get_directory_threaded(char *dname, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  char *result = dialog_module::get_directory(dname, true);
-  #else
   char *result = dialog_module::get_directory(dname);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -335,11 +267,7 @@ void get_directory_threaded(char *dname, unsigned id) {
 }
 
 void get_directory_alt_threaded(char *capt, char *root, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  char *result = dialog_module::get_directory_alt(capt, root, true);
-  #else
   char *result = dialog_module::get_directory_alt(capt, root);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -349,11 +277,7 @@ void get_directory_alt_threaded(char *capt, char *root, unsigned id) {
 }
 
 void get_color_threaded(double defcol, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  double result = dialog_module::get_color((int)defcol, true);
-  #else
   double result = dialog_module::get_color((int)defcol);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
@@ -363,11 +287,7 @@ void get_color_threaded(double defcol, unsigned id) {
 }
 
 void get_color_ext_threaded(double defcol, char *title, unsigned id) {
-  #if (defined(__APPLE__) && defined(__MACH__))
-  double result = dialog_module::get_color_ext((int)defcol, title, true);
-  #else
   double result = dialog_module::get_color_ext((int)defcol, title);
-  #endif
   int resultMap = CreateDsMap(0);
   DsMapAddDouble(resultMap, (char *)"id", id);
   DsMapAddDouble(resultMap, (char *)"status", 1);
