@@ -270,7 +270,7 @@ const char *cocoa_input_box(const char *str, const char *def, const char *icon, 
       cancel_pressed = false;
       [NSApp stopModal];
     } else if (result == NSAlertSecondButtonReturn) {
-      strres = "";
+      strres.clear();
       cancel_pressed = true;
       [NSApp stopModal];
     }
@@ -322,7 +322,7 @@ const char *cocoa_password_box(const char *str, const char *def, const char *ico
       cancel_pressed = false;
       [NSApp stopModal];
     } else if (result == NSAlertSecondButtonReturn) {
-      strres = "";
+      strres.clear();
       cancel_pressed = true;
       [NSApp stopModal];
     }
@@ -460,6 +460,9 @@ const char *cocoa_get_open_filename(const char *filter, const char *fname, const
 
       theOpenResult = [theOpenFile UTF8String];
     }
+
+    if (result == NSModalResponseCancel)
+      theOpenResult.clear();
 
   }];
 
@@ -609,6 +612,9 @@ const char *cocoa_get_save_filename(const char *filter, const char *fname, const
       NSString *theSaveFile = [theSaveURL path];
       theSaveResult = [theSaveFile UTF8String];
     }
+
+    if (result == NSModalResponseCancel)
+      theSaveResult.clear();
     
   }];
 
@@ -680,6 +686,7 @@ const char *cocoa_get_directory(const char *capt, const char *root) {
       theFolderResult = [theFolderPath UTF8String];
       [NSApp stopModal];
     } else if (result == NSModalResponseCancel) {
+      theFolderResult.clear();
       [NSApp stopModal];
     }
 
