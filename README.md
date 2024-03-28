@@ -12,11 +12,11 @@ Supports Windows, macOS, Linux, FreeBSD, DragonFly BSD, NetBSD, OpenBSD, and Sun
 
 ----------------------------------------------------------------------------------------------------------------------------------
 
-# Dependency Option 1: GTK (Zenity)
+# Dependency Option 1: GTK+ (Zenity)
 
 Debian-based Linux distributions: sudo apt install zenity
 
-RedHat-based Linux distributions: sudo yum install zenity
+Fedora-based Linux distributions: sudo yum install zenity
 
 Arch-based Linux distributions: sudo pacman -Sy zenity
 
