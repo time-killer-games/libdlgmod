@@ -483,9 +483,9 @@ const char *cocoa_get_open_filename(const char *filter, const char *fname, const
     }
 
     if (openShowAccessory) {
-        if ([openPop indexOfSelectedItem] != openPopIndex) {
-            selectedOpenPattern = [openPatternArray objectAtIndex:[openPop indexOfSelectedItem]];
-            openPatternItems = [selectedOpenPattern componentsSeparatedByString:@";"];
+      if ([openPop indexOfSelectedItem] != openPopIndex) {
+        selectedOpenPattern = [openPatternArray objectAtIndex:[openPop indexOfSelectedItem]];
+        openPatternItems = [selectedOpenPattern componentsSeparatedByString:@";"];
             
         if ([openPatternItems containsObject:@"*"]) {
           [oFilePanel setAllowedContentTypes:@[]];
@@ -625,28 +625,8 @@ const char *cocoa_get_open_filename(const char *filter, const char *fname, const
   NSModalSession openSession = [NSApp beginModalSessionForWindow:oFilePanel];
 
   for (;;) {
-    if ([NSApp runModalSession:openSession] == NSModalResponseOK) {
-      NSURL *theOpenURL;
-      NSString *theOpenFile;
-      int openURLSize = [[oFilePanel URLs] count];
 
-      if (openURLSize > 1) {
-        NSMutableArray *openFileArray = [[NSMutableArray alloc] init];
-
-        for (int openURLIndex = 0; openURLIndex < openURLSize; openURLIndex += 1) {
-          [openFileArray addObject:[[[oFilePanel URLs] objectAtIndex:openURLIndex] path]];
-        }
-
-        theOpenFile = [openFileArray componentsJoinedByString:@"\n"];
-        [openFileArray release];
-      } else
-        theOpenFile = [[[oFilePanel URLs] objectAtIndex:0] path];
-
-      theOpenResult = [theOpenFile UTF8String];
-      break;
-    }
-
-    if ([NSApp runModalSession:openSession] == NSModalResponseCancel)
+    if ([NSApp runModalSession:openSession] != NSModalResponseContinue)
       break;
 
     if (![oFilePanel isAccessoryViewDisclosed] && !initOpenAccessory) {
@@ -918,6 +898,9 @@ const char *cocoa_get_save_filename(const char *filter, const char *fname, const
   NSModalSession saveSession = [NSApp beginModalSessionForWindow:sFilePanel];
 
   for (;;) {
+
+    if ([NSApp runModalSession:saveSession] != NSModalResponseContinue)
+      break;
 
     if (saveShowAccessory) {
       if ([savePop indexOfSelectedItem] != savePopIndex) {
