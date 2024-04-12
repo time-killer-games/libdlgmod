@@ -1,7 +1,7 @@
 cd "${0%/*}"
 
 if [ `uname` = "Darwin" ]; then
-  clang++ "DlgModule/Universal/dlgmodule.cpp" "DlgModule/MacOSX/dlgmodule.mm" -o "libdlgmod.dylib" -shared -std=c++17 -ObjC++ -framework AppKit -framework UniformTypeIdentifiers -arch arm64 -arch x86_64 -fPIC
+  clang++ "DlgModule/Universal/dlgmodule.cpp" "DlgModule/MacOSX/dlgmodule.mm" -o "libdlgmod.dylib" -shared -std=c++17 -ObjC++ -framework AppKit -framework UniformTypeIdentifiers -mmacosx-version-min=10.13 -arch arm64 -arch x86_64 -fPIC
 elif [ $(uname) = "Linux" ]; then
   g++ "DlgModule/Universal/dlgmodule.cpp" "DlgModule/xlib/dlgmodule.cpp" "DlgModule/xlib/apiprocess/process.cpp" "DlgModule/xlib/xprocess.cpp" "DlgModule/xlib/lodepng.cpp" -o "libdlgmod.so" -DPROCESS_GUIWINDOW_IMPL -DNULLIFY_STDERR -IDlgModule/xlib/ -std=c++17 -shared -static-libgcc -static-libstdc++ -lX11 -lpthread -fPIC
 elif [ $(uname) = "FreeBSD" ]; then
