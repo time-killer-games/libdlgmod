@@ -37,10 +37,13 @@
 
 #include "../Universal/dlgmodule.h"
 
+#include <unistd.h>
 #include <sys/stat.h>
 #include <AppKit/AppKit.h>
-#include <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
-#include <unistd.h>
+#include <AvailabilityMacros.h>
+#if __MAC_OS_X_VERSION_MAX_ALLOWED < 110000
+#include <UniformTypeIdentifiers/UTType.h>
+#endif
 
 using std::string;
 using std::vector;
@@ -347,6 +350,7 @@ bool initOpenAccessory;
 NSString *selectedOpenPattern;
 int openPopIndex;
 NSArray *openPatternItems;
+#if __MAC_OS_X_VERSION_MAX_ALLOWED < 110000
 const char *cocoa_get_open_filename(const char *filter, const char *fname, const char *dir, const char *title, bool mselect) {
   cancel_pressed = false;
 
@@ -515,11 +519,173 @@ const char *cocoa_get_open_filename(const char *filter, const char *fname, const
 
   return theOpenResult.c_str();
 }
+#else
+const char *cocoa_get_open_filename(const char *filter, const char *fname, const char *dir, const char *title, const bool mselect) {
+  NSOpenPanel *oFilePanel = [NSOpenPanel openPanel];
+  [oFilePanel setMessage:[NSString stringWithUTF8String:title]];
+  [oFilePanel setDirectoryURL:[NSURL fileURLWithPath:[NSString stringWithUTF8String:dir]]];
+  [oFilePanel setCanChooseFiles:YES];
+  [oFilePanel setCanChooseDirectories:NO];
+  [oFilePanel setCanCreateDirectories:NO];
+  [oFilePanel setResolvesAliases:YES];
+
+  if (mselect)
+    [oFilePanel setAllowsMultipleSelection:YES];
+  else
+    [oFilePanel setAllowsMultipleSelection:NO];
+
+  NSView *openView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 431, 21)];
+  NSPopUpButton *openPop = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(104, 0, 255, 22)];
+  NSString *openFilter = [NSString stringWithUTF8String:filter];
+  bool openShowAccessory = true;
+  bool openAllowAllFiles = false;
+
+  if ([openFilter length] == 0 ||
+    ([openFilter rangeOfString:@"|"].location != NSNotFound &&
+     [openFilter rangeOfString:@"|"].location == 0))
+    openShowAccessory = false;
+
+  if ([openFilter length] == 0 ||
+    [openFilter rangeOfString:@"|"].location == NSNotFound) {
+    openFilter = [openFilter stringByAppendingString:@"|"];
+    openAllowAllFiles = true;
+  }
+
+  int openIndex = 0;
+  int openCount = 0, openLength = [openFilter length];
+  NSRange openRange = NSMakeRange(0, openLength);
+
+  while (openRange.location != NSNotFound) {
+    openRange = [openFilter rangeOfString: @"|" options:0 range:openRange];
+
+    if (openRange.location != NSNotFound) {
+      openRange = NSMakeRange(openRange.location + openRange.length, openLength - (openRange.location + openRange.length));
+      openCount += 1;
+    }
+  }
+
+  NSString *openPattern = openFilter;
+  openPattern = [openPattern stringByReplacingOccurrencesOfString:@"*." withString:@""];
+  openPattern = [openPattern stringByReplacingOccurrencesOfString:@" " withString:@""];
+
+  NSArray *openArray1 = [openFilter componentsSeparatedByString:@"|"];
+  NSArray *openArray2 = [openPattern componentsSeparatedByString:@"|"];
+  NSMutableArray *openPatternArray = [[NSMutableArray alloc] init];
+  NSMutableArray *openDescrArray = [[NSMutableArray alloc] init];
+
+  for (openIndex = 0; openIndex <= openCount; openIndex += 1) {
+    if (openIndex % 2) {
+      [openPatternArray addObject:[openArray2 objectAtIndex:openIndex]];
+    } else {
+      [openDescrArray addObject:[openArray1 objectAtIndex:openIndex]];
+    }
+  }
+
+  selectedOpenPattern = [openPatternArray objectAtIndex:0];
+  openPatternItems = [selectedOpenPattern componentsSeparatedByString:@";"];
+  [oFilePanel setAllowedFileTypes:openPatternItems];
+
+  if ([openPatternItems containsObject:@"*"] || openAllowAllFiles || !openShowAccessory)
+    [oFilePanel setAllowedFileTypes:nullptr];
+
+  [openPop addItemsWithTitles:openDescrArray];
+  [openPop selectItemWithTitle:[openDescrArray objectAtIndex:0]];
+  [openView addSubview:openPop];
+  [oFilePanel setAccessoryView:openView];
+
+  if (!openShowAccessory)
+    [oFilePanel setAccessoryView:nullptr];
+
+  [oFilePanel beginSheetModalForWindow:(NSWindow *)owner completionHandler:^(NSInteger result) {
+    if (result == NSModalResponseOK) {
+      NSURL *theOpenURL;
+      NSString *theOpenFile;
+      int openURLSize = [[oFilePanel URLs] count];
+
+      if (openURLSize > 1) {
+        NSMutableArray *openFileArray = [[NSMutableArray alloc] init];
+
+        for (int openURLIndex = 0; openURLIndex < openURLSize; openURLIndex += 1) {
+          [openFileArray addObject:[[[oFilePanel URLs] objectAtIndex:openURLIndex] path]];
+        }
+
+        theOpenFile = [openFileArray componentsJoinedByString:@"\n"];
+        [openFileArray release];
+      } else
+        theOpenFile = [[[oFilePanel URLs] objectAtIndex:0] path];
+
+      theOpenResult = [theOpenFile UTF8String];
+    }
+
+    if (result == NSModalResponseCancel)
+      theOpenResult.clear();
+
+  }];
+
+  NSModalSession openSession = [NSApp beginModalSessionForWindow:oFilePanel];
+
+  for (;;) {
+    if ([NSApp runModalSession:openSession] == NSModalResponseOK) {
+      NSURL *theOpenURL;
+      NSString *theOpenFile;
+      int openURLSize = [[oFilePanel URLs] count];
+
+      if (openURLSize > 1) {
+        NSMutableArray *openFileArray = [[NSMutableArray alloc] init];
+
+        for (int openURLIndex = 0; openURLIndex < openURLSize; openURLIndex += 1) {
+          [openFileArray addObject:[[[oFilePanel URLs] objectAtIndex:openURLIndex] path]];
+        }
+
+        theOpenFile = [openFileArray componentsJoinedByString:@"\n"];
+        [openFileArray release];
+      } else
+        theOpenFile = [[[oFilePanel URLs] objectAtIndex:0] path];
+
+      theOpenResult = [theOpenFile UTF8String];
+      break;
+    }
+
+    if ([NSApp runModalSession:openSession] == NSModalResponseCancel)
+      break;
+
+    if (![oFilePanel isAccessoryViewDisclosed] && !initOpenAccessory) {
+      [oFilePanel setAccessoryViewDisclosed:YES];
+      initOpenAccessory = true;
+    }
+
+    if (openShowAccessory) {
+      if ([openPop indexOfSelectedItem] != openPopIndex) {
+        selectedOpenPattern = [openPatternArray objectAtIndex:[openPop indexOfSelectedItem]];
+        openPatternItems = [selectedOpenPattern componentsSeparatedByString:@";"];
+
+        if ([openPatternItems containsObject:@"*"])
+          [oFilePanel setAllowedFileTypes:nullptr];
+        else
+          [oFilePanel setAllowedFileTypes:openPatternItems];
+
+        openPopIndex = [openPop indexOfSelectedItem];
+      }
+    }
+  }
+
+  [NSApp endModalSession:openSession];
+  [oFilePanel close];
+
+  [openPatternArray release];
+  [openDescrArray release];
+  [openPop release];
+  [openView release];
+
+  return theOpenResult.c_str();
+}
+#endif
 
 std::string theSaveResult;
 NSString *selectedSavePattern;
 NSArray *savePatternItems;
 int savePopIndex;
+#if __MAC_OS_X_VERSION_MAX_ALLOWED < 110000
 const char *cocoa_get_save_filename(const char *filter, const char *fname, const char *dir, const char *title) {
   cancel_pressed = false;
 
@@ -663,6 +829,122 @@ const char *cocoa_get_save_filename(const char *filter, const char *fname, const
 
   return theSaveResult.c_str();
 }
+#else
+const char *cocoa_get_save_filename(const char *filter, const char *fname, const char *dir, const char *title) {
+  NSSavePanel *sFilePanel = [NSSavePanel savePanel];
+  [sFilePanel setMessage:[NSString stringWithUTF8String:title]];
+  [sFilePanel setDirectoryURL:[NSURL fileURLWithPath:[NSString stringWithUTF8String:dir]]];
+  [sFilePanel setNameFieldStringValue:[[[NSString stringWithUTF8String:fname] lastPathComponent] stringByDeletingPathExtension]];
+  [sFilePanel setCanCreateDirectories:YES];
+
+  NSView *saveView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 433, 21)];
+  NSPopUpButton *savePop = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(105, 0, 255, 22)];
+  NSString *saveFilter = [NSString stringWithUTF8String:filter];
+  bool saveShowAccessory = true;
+  bool saveAllowAllFiles = false;
+
+  if ([saveFilter length] == 0 ||
+    ([saveFilter rangeOfString:@"|"].location != NSNotFound &&
+     [saveFilter rangeOfString:@"|"].location == 0))
+    saveShowAccessory = false;
+
+  if ([saveFilter length] == 0 ||
+    [saveFilter rangeOfString:@"|"].location == NSNotFound) {
+    saveFilter = [saveFilter stringByAppendingString:@"|"];
+    saveAllowAllFiles = true;
+  }
+
+  int saveIndex = 0;
+  int saveCount = 0, saveLength = [saveFilter length];
+  NSRange saveRange = NSMakeRange(0, saveLength);
+
+  while (saveRange.location != NSNotFound) {
+    saveRange = [saveFilter rangeOfString: @"|" options:0 range:saveRange];
+
+    if (saveRange.location != NSNotFound) {
+      saveRange = NSMakeRange(saveRange.location + saveRange.length, saveLength - (saveRange.location + saveRange.length));
+      saveCount += 1;
+    }
+  }
+
+  NSString *savePattern = saveFilter;
+  savePattern = [savePattern stringByReplacingOccurrencesOfString:@"*." withString:@""];
+  savePattern = [savePattern stringByReplacingOccurrencesOfString:@" " withString:@""];
+
+  NSArray *saveArray1 = [saveFilter componentsSeparatedByString:@"|"];
+  NSArray *saveArray2 = [savePattern componentsSeparatedByString:@"|"];
+  NSMutableArray *savePatternArray = [[NSMutableArray alloc] init];
+  NSMutableArray *saveDescrArray = [[NSMutableArray alloc] init];
+
+  for (saveIndex = 0; saveIndex <= saveCount; saveIndex += 1) {
+    if (saveIndex % 2) {
+      [savePatternArray addObject:[saveArray2 objectAtIndex:saveIndex]];
+    } else {
+      [saveDescrArray addObject:[saveArray1 objectAtIndex:saveIndex]];
+    }
+  }
+
+  selectedSavePattern = [savePatternArray objectAtIndex:0];
+  savePatternItems = [selectedSavePattern componentsSeparatedByString:@";"];
+  [sFilePanel setAllowedFileTypes:savePatternItems];
+
+  [sFilePanel setAllowedFileTypes:savePatternItems];
+
+  if ([savePatternItems containsObject:@"*"] || saveAllowAllFiles || !saveShowAccessory)
+    [sFilePanel setAllowedFileTypes:nullptr];
+
+  [savePop addItemsWithTitles:saveDescrArray];
+  [savePop selectItemWithTitle:[saveDescrArray objectAtIndex:0]];
+  [saveView addSubview:savePop];
+  [sFilePanel setAccessoryView:saveView];
+
+  if (!saveShowAccessory)
+    [sFilePanel setAccessoryView:nullptr];
+
+  [sFilePanel beginSheetModalForWindow:(NSWindow *)owner completionHandler:^(NSInteger result) {
+      
+    if (result == NSModalResponseOK) {
+      NSURL *theSaveURL = [sFilePanel URL];
+      NSString *theSaveFile = [theSaveURL path];
+      theSaveResult = [theSaveFile UTF8String];
+    }
+
+    if (result == NSModalResponseCancel)
+      theSaveResult.clear();
+      
+  }];
+
+  NSModalSession saveSession = [NSApp beginModalSessionForWindow:sFilePanel];
+
+  for (;;) {
+
+    if (saveShowAccessory) {
+      if ([savePop indexOfSelectedItem] != savePopIndex) {
+        selectedSavePattern = [savePatternArray objectAtIndex:[savePop indexOfSelectedItem]];
+        savePatternItems = [selectedSavePattern componentsSeparatedByString:@";"];
+
+        if ([savePatternItems containsObject:@"*"])
+          [sFilePanel setAllowedFileTypes:nullptr];
+        else
+          [sFilePanel setAllowedFileTypes:savePatternItems];
+
+        savePopIndex = [savePop indexOfSelectedItem];
+      }
+    }
+  }
+
+  [NSApp endModalSession:saveSession];
+
+  [sFilePanel close];
+
+  [savePatternArray release];
+  [saveDescrArray release];
+  [savePop release];
+  [saveView release];
+
+  return theSaveResult.c_str();
+}
+#endif
 
 std::string theFolderResult;
 const char *cocoa_get_directory(const char *capt, const char *root) {
