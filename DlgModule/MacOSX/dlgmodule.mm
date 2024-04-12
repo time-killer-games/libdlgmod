@@ -670,6 +670,7 @@ const char *cocoa_get_open_filename(const char *filter, const char *fname, const
   }
 
   [NSApp endModalSession:openSession];
+
   [oFilePanel close];
 
   [openPatternArray release];
