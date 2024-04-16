@@ -463,9 +463,7 @@ const char *cocoa_get_open_filename(const char *filter, const char *fname, const
         theOpenFile = [[[oFilePanel URLs] objectAtIndex:0] path];
 
       theOpenResult = [theOpenFile UTF8String];
-    }
-
-    if (result == NSModalResponseCancel)
+    } else if (result == NSModalResponseCancel)
       theOpenResult.clear();
 
   }];
@@ -596,6 +594,9 @@ const char *cocoa_get_open_filename(const char *filter, const char *fname, const
   if (!openShowAccessory)
     [oFilePanel setAccessoryView:nullptr];
 
+  initOpenAccessory = false;
+  openPopIndex = 0;
+
   [oFilePanel beginSheetModalForWindow:(NSWindow *)owner completionHandler:^(NSInteger result) {
     if (result == NSModalResponseOK) {
       NSURL *theOpenURL;
@@ -615,9 +616,7 @@ const char *cocoa_get_open_filename(const char *filter, const char *fname, const
         theOpenFile = [[[oFilePanel URLs] objectAtIndex:0] path];
 
       theOpenResult = [theOpenFile UTF8String];
-    }
-
-    if (result == NSModalResponseCancel)
+    } else if (result == NSModalResponseCancel)
       theOpenResult.clear();
 
   }];
@@ -758,9 +757,7 @@ const char *cocoa_get_save_filename(const char *filter, const char *fname, const
       NSURL *theSaveURL = [sFilePanel URL];
       NSString *theSaveFile = [theSaveURL path];
       theSaveResult = [theSaveFile UTF8String];
-    }
-
-    if (result == NSModalResponseCancel)
+    } else if (result == NSModalResponseCancel)
       theSaveResult.clear();
     
   }];
@@ -882,15 +879,15 @@ const char *cocoa_get_save_filename(const char *filter, const char *fname, const
   if (!saveShowAccessory)
     [sFilePanel setAccessoryView:nullptr];
 
+  savePopIndex = 0;
+
   [sFilePanel beginSheetModalForWindow:(NSWindow *)owner completionHandler:^(NSInteger result) {
       
     if (result == NSModalResponseOK) {
       NSURL *theSaveURL = [sFilePanel URL];
       NSString *theSaveFile = [theSaveURL path];
       theSaveResult = [theSaveFile UTF8String];
-    }
-
-    if (result == NSModalResponseCancel)
+    } else if (result == NSModalResponseCancel)
       theSaveResult.clear();
       
   }];
