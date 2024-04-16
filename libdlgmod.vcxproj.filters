@@ -15,15 +15,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="DlgModule\Win32\dlgmodule.cpp">
+    <ClCompile Include="libdlgmod\win32\libdlgmod.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DlgModule\Universal\dlgmodule.cpp">
+    <ClCompile Include="libdlgmod\general\libdlgmod.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="DlgModule\Universal\dlgmodule.h">
+    <ClInclude Include="libdlgmod.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
