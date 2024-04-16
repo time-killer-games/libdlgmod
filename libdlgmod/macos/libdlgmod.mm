@@ -39,8 +39,8 @@
 
 #include <unistd.h>
 #include <sys/stat.h>
+
 #include <AppKit/AppKit.h>
-#include <AvailabilityMacros.h>
 #include <UniformTypeIdentifiers/UTType.h>
 
 using std::string;
