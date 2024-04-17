@@ -2,7 +2,7 @@
 
 # Dialog Module - The World's Simplest Way to Dialog
 
-A simple, easy-to-use, cross-platform, dialog API, inspired by the GameMaker Language dialog functions. You may dynamically link your projects to the pre-built binaries, or just include the "libdlgmod/libdlgmod.h" header.
+A simple, easy-to-use, cross-platform, dialog API, inspired by the GameMaker Language dialog functions. You may dynamically link your projects to the pre-built binaries, or just include the ["libdlgmod/libdlgmod.h"](https://github.com/time-killer-games/libdlgmod/blob/main/libdlgmod/libdlgmod.h) header.
 
 ----------------------------------------------------------------------------------------------------------------------------------
 
@@ -14,41 +14,35 @@ Supports Windows, macOS, Linux, FreeBSD, DragonFly BSD, NetBSD, OpenBSD, and Sun
 
 # Dependency Option 1: GTK+ (Zenity)
 
-Debian-based Linux distributions: sudo apt install zenity
+Debian-based Linux distributions: `sudo apt install zenity`
 
-Fedora-based Linux distributions: sudo yum install zenity
+Fedora-based Linux distributions: `sudo yum install zenity`
 
-Arch-based Linux distributions: sudo pacman -Sy zenity
+Arch-based Linux distributions: `sudo pacman -Sy zenity`
 
-FreeBSD-based BSD distributions: sudo pkg install zenity
+FreeBSD-based BSD distributions: `sudo pkg install zenity`
 
 ----------------------------------------------------------------------------------------------------------------------------------
 
 # Dependency Option 2: Qt (KDialog)
 
-Debian-based Linux distributions: sudo apt install kdialog
+Debian-based Linux distributions: `sudo apt install kdialog`
 
-RedHat-based Linux distributions: sudo yum install kdialog
+RedHat-based Linux distributions: `sudo yum install kdialog`
 
-Arch-based Linux distributions: sudo pacman -Sy kdialog
+Arch-based Linux distributions: `sudo pacman -Sy kdialog`
 
-FreeBSD-based BSD distributions: sudo pkg install kdialog
+FreeBSD-based BSD distributions: `sudo pkg install kdialog`
 
 ----------------------------------------------------------------------------------------------------------------------------------
 
 # GameMaker Studio 2 Extension | Documentation
 
-Also available from itch.io:
+Available for download from [itch.io](https://itch.io) for GameMaker Studio use [here](https://samuel-venable.itch.io/gamemaker-extension-collection).
 
-https://samuel-venable.itch.io/gamemaker-extension-collection
+Documentation for all of the functions included can be found [here](http://dialogmodule.weebly.com/).
 
-Documentation for all of the functions included can be found here:
-
-http://dialogmodule.weebly.com/
-
-Downloadable PDF for offline viewing of the documentation is here:
-
-https://drive.google.com/file/d/18xXZZlvazihPC62imZO4CkZYH2dfxYwz/
+Downloadable PDF for offline viewing of the documentation is [here](https://drive.google.com/file/d/18xXZZlvazihPC62imZO4CkZYH2dfxYwz/).
 
 ----------------------------------------------------------------------------------------------------------------------------------
 
