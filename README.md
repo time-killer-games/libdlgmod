@@ -36,9 +36,9 @@ FreeBSD-based BSD distributions: `sudo pkg install kdialog`
 
 ----------------------------------------------------------------------------------------------------------------------------------
 
-# GameMaker Studio 2 Extension | Documentation
+# GameMaker Extension | Documentation
 
-Available for download from [itch.io](https://itch.io) for GameMaker Studio use [here](https://samuel-venable.itch.io/gamemaker-extension-collection).
+Available for download from [itch.io](https://itch.io) freely for GameMaker use [here](https://samuel-venable.itch.io/gamemaker-extension-collection).
 
 Documentation for all of the functions included can be found [here](http://dialogmodule.weebly.com/).
 
