@@ -639,6 +639,7 @@ char *get_open_filename_ext(char *filter, char *fname, char *dir, char *title) {
     add_escaping(str_path, false, "") + string("\"") + zenity_filter(filter) + string(");echo $ans");
   } else if (dm_dialogengine == dm_kdialog) {
     string str_title = add_escaping(title, true, "Open");
+    caption = (str_title == "Open") ? "Open" : title;
     string str_fname = filename_name(fname);
     string str_dir = dir;
     string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
@@ -676,6 +677,7 @@ char *get_open_filenames_ext(char *filter, char *fname, char *dir, char *title) 
     add_escaping(str_path, false, "") + string("\"") + zenity_filter(filter);
   } else if (dm_dialogengine == dm_kdialog) {
     string str_title = add_escaping(title, true, "Open");
+    caption = (str_title == "Open") ? "Open" : title;
     string str_fname = filename_name(fname);
     string str_dir = dir;
     string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
@@ -719,6 +721,7 @@ char *get_save_filename_ext(char *filter, char *fname, char *dir, char *title) {
     add_escaping(str_path, false, "") + string("\"") + zenity_filter(filter) + string(");echo $ans");
   } else if (dm_dialogengine == dm_kdialog) {
     string str_title = add_escaping(title, true, "Save As");
+    caption = (str_title == "Save As") ? "Save As" : title;
     string str_fname = filename_name(fname);
     string str_dir = dir;
     string str_path; if (!str_dir.empty()) str_path = str_dir + string("/") + str_fname;
@@ -753,6 +756,7 @@ char *get_directory_alt(char *capt, char *root) {
     add_escaping(str_dname, false, "") + string("\"") + str_end;
   } else if (dm_dialogengine == dm_kdialog) {
     string str_title = add_escaping(capt, true, "Select Directory");
+    caption = (str_title == "Select Directory") ? "Select Directory" : capt;
     string str_dname = root;
     if (str_dname.empty() || str_dname[0] != '/') pwd = "\"$HOME/\"";
     else pwd = string("\"") + add_escaping(str_dname, false, "") + string("\"");
