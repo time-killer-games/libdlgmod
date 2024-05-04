@@ -212,16 +212,14 @@ static inline void SetErrorHandlers() {
   XSetIOErrorHandler(XIOErrorHandlerImpl);
 }
 
-static inline void change_relative_to_kwin() {
+static inline void change_relative_to_kde() {
   cancel_pressed = false;
   setenv("WAYLAND_DISPLAY", "", 1);
   if (dm_dialogengine == dm_x11) {
-    Display *display = XOpenDisplay(nullptr);
-    Atom aKWinRunning = XInternAtom(display, "KWIN_RUNNING", true);
-    bool bKWinRunning = (aKWinRunning != None);
-    if (bKWinRunning) dm_dialogengine = dm_kdialog;
+    string currdesktop = getenv("XDG_CURRENT_DESKTOP") ? getenv("XDG_CURRENT_DESKTOP") : "";
+    bool isKDE = (currdesktop == "KDE");
+    if (isKDE) dm_dialogengine = dm_kdialog;
     else dm_dialogengine = dm_zenity;
-    XCloseDisplay(display);
   }
 }
 
@@ -344,7 +342,7 @@ int make_color_rgb(unsigned char r, unsigned char g, unsigned char b) {
 }
 
 int show_message_helperfunc(char *str) {
-  change_relative_to_kwin();
+  change_relative_to_kde();
   string str_command;
   string str_title = message_cancel ? add_escaping(caption, true, "Question") : add_escaping(caption, true, "Information");
   string str_iconflag = (dm_dialogengine == dm_zenity) ? " --window-icon=\"" : " --icon \"";
@@ -390,7 +388,7 @@ int show_message_helperfunc(char *str) {
 }
 
 int show_question_helperfunc(char *str) {
-  change_relative_to_kwin();
+  change_relative_to_kde();
   string str_command;
   string str_title = add_escaping(caption, true, "Question");
   string str_iconflag = (dm_dialogengine == dm_zenity) ? " --window-icon=\"" : " --icon \"";
@@ -448,7 +446,7 @@ int show_question_cancelable(char *str) {
 }
 
 int show_attempt(char *str) {
-  change_relative_to_kwin();
+  change_relative_to_kde();
   string str_command;
   string str_title = add_escaping(caption, true, "Error");
   string str_iconflag = (dm_dialogengine == dm_zenity) ? " --window-icon=\"" : " --icon \"";
@@ -477,7 +475,7 @@ int show_attempt(char *str) {
 }
 
 int show_error(char *str, bool abort) {
-  change_relative_to_kwin();
+  change_relative_to_kde();
   string str_command;
   string str_title = add_escaping(caption, true, "Error");
   string str_iconflag = (dm_dialogengine == dm_zenity) ? " --window-icon=\"" : " --icon \"";
@@ -526,7 +524,7 @@ int show_error(char *str, bool abort) {
 }
 
 char *get_string(char *str, char *def) {
-  change_relative_to_kwin();
+  change_relative_to_kde();
   string str_command;
   string str_title = add_escaping(caption, true, "Input Query");
   string caption_previous = caption;
@@ -556,7 +554,7 @@ char *get_string(char *str, char *def) {
 }
 
 char *get_password(char *str, char *def) {
-  change_relative_to_kwin();
+  change_relative_to_kde();
   string str_command;
   string str_title = add_escaping(caption, true, "Input Query");
   string str_iconflag = (dm_dialogengine == dm_zenity) ? " --window-icon=\"" : " --icon \"";
@@ -624,7 +622,7 @@ char *get_open_filename(char *filter, char *fname) {
 }
 
 char *get_open_filename_ext(char *filter, char *fname, char *dir, char *title) {
-  change_relative_to_kwin();
+  change_relative_to_kde();
   string str_command; string pwd;
   string caption_previous = caption;
   if (dm_dialogengine == dm_zenity) {
@@ -662,7 +660,7 @@ char *get_open_filenames(char *filter, char *fname) {
 }
 
 char *get_open_filenames_ext(char *filter, char *fname, char *dir, char *title) {
-  change_relative_to_kwin();
+  change_relative_to_kde();
   string str_command; string pwd;
   string caption_previous = caption;
   if (dm_dialogengine == dm_zenity) {
@@ -706,7 +704,7 @@ char *get_save_filename(char *filter, char *fname) {
 }
 
 char *get_save_filename_ext(char *filter, char *fname, char *dir, char *title) {
-  change_relative_to_kwin();
+  change_relative_to_kde();
   string str_command; string pwd;
   string caption_previous = caption;
   if (dm_dialogengine == dm_zenity) {
@@ -742,7 +740,7 @@ char *get_directory(char *dname) {
 }
 
 char *get_directory_alt(char *capt, char *root) {
-  change_relative_to_kwin();
+  change_relative_to_kde();
   string str_command; string pwd;
   string caption_previous = caption;
   if (dm_dialogengine == dm_zenity) {
@@ -774,7 +772,7 @@ int get_color(int defcol) {
 }
 
 int get_color_ext(int defcol, char *title) {
-  change_relative_to_kwin();
+  change_relative_to_kde();
   string str_command;
   string str_title = add_escaping(title, true, "Color");
   string caption_previous = caption;
