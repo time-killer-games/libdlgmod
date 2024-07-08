@@ -577,10 +577,23 @@ const char *cocoa_get_open_filename(const char *filter, const char *fname, const
   
     selectedOpenPattern = [openPatternArray objectAtIndex:0];
     openPatternItems = [selectedOpenPattern componentsSeparatedByString:@";"];
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     [oFilePanel setAllowedFileTypes:openPatternItems];
+    #pragma clang diagnostic pop
+    #pragma GCC diagnostic pop
+
   
     if ([openPatternItems containsObject:@"*"] || openAllowAllFiles || !openShowAccessory)
+      #pragma GCC diagnostic push
+      #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+      #pragma clang diagnostic push
+      #pragma clang diagnostic ignored "-Wdeprecated-declarations"
       [oFilePanel setAllowedFileTypes:nullptr];
+      #pragma clang diagnostic pop
+      #pragma GCC diagnostic pop
   
     [openPop addItemsWithTitles:openDescrArray];
     [openPop selectItemWithTitle:[openDescrArray objectAtIndex:0]];
@@ -635,9 +648,21 @@ const char *cocoa_get_open_filename(const char *filter, const char *fname, const
           openPatternItems = [selectedOpenPattern componentsSeparatedByString:@";"];
   
           if ([openPatternItems containsObject:@"*"])
+            #pragma GCC diagnostic push
+            #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             [oFilePanel setAllowedFileTypes:nullptr];
+            #pragma clang diagnostic pop
+            #pragma GCC diagnostic pop
           else
+            #pragma GCC diagnostic push
+            #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             [oFilePanel setAllowedFileTypes:openPatternItems];
+            #pragma clang diagnostic pop
+            #pragma GCC diagnostic pop
   
           openPopIndex = [openPop indexOfSelectedItem];
         }
@@ -858,12 +883,22 @@ const char *cocoa_get_save_filename(const char *filter, const char *fname, const
   
     selectedSavePattern = [savePatternArray objectAtIndex:0];
     savePatternItems = [selectedSavePattern componentsSeparatedByString:@";"];
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     [sFilePanel setAllowedFileTypes:savePatternItems];
-  
-    [sFilePanel setAllowedFileTypes:savePatternItems];
+    #pragma clang diagnostic pop
+    #pragma GCC diagnostic pop
   
     if ([savePatternItems containsObject:@"*"] || saveAllowAllFiles || !saveShowAccessory)
+      #pragma GCC diagnostic push
+      #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+      #pragma clang diagnostic push
+      #pragma clang diagnostic ignored "-Wdeprecated-declarations"
       [sFilePanel setAllowedFileTypes:nullptr];
+      #pragma clang diagnostic pop
+      #pragma GCC diagnostic pop
   
     [savePop addItemsWithTitles:saveDescrArray];
     [savePop selectItemWithTitle:[saveDescrArray objectAtIndex:0]];
@@ -899,9 +934,21 @@ const char *cocoa_get_save_filename(const char *filter, const char *fname, const
           savePatternItems = [selectedSavePattern componentsSeparatedByString:@";"];
   
           if ([savePatternItems containsObject:@"*"])
+            #pragma GCC diagnostic push
+            #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             [sFilePanel setAllowedFileTypes:nullptr];
+            #pragma clang diagnostic pop
+            #pragma GCC diagnostic pop
           else
+            #pragma GCC diagnostic push
+            #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             [sFilePanel setAllowedFileTypes:savePatternItems];
+            #pragma clang diagnostic pop
+            #pragma GCC diagnostic pop
   
           savePopIndex = [savePop indexOfSelectedItem];
         }
