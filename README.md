@@ -28,7 +28,7 @@ FreeBSD-based BSD distributions: `sudo pkg install zenity`
 
 Debian-based Linux distributions: `sudo apt install kdialog`
 
-RedHat-based Linux distributions: `sudo yum install kdialog`
+Fedora-based Linux distributions: `sudo yum install kdialog`
 
 Arch-based Linux distributions: `sudo pacman -Sy kdialog`
 
