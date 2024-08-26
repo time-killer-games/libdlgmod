@@ -13,5 +13,5 @@ elif [ $(uname) = "NetBSD" ]; then
 elif [ $(uname) = "OpenBSD" ]; then
   clang++ "libdlgmod/general/libdlgmod.cpp" "libdlgmod/xlib/libdlgmod.cpp" "libdlgmod/xlib/apiprocess/process.cpp" "libdlgmod/xlib/xprocess.cpp" "libdlgmod/xlib/lodepng.cpp" -o "libdlgmod.so" -DPROCESS_GUIWINDOW_IMPL -DNULLIFY_STDERR -I. -std=c++17 -shared `pkg-config --cflags --libs x11` -lkvm -lc -lpthread -fPIC;
 elif [ $(uname) = "SunOS" ]; then
-  export PKG_CONFIG_PATH=/usr/lib/64/pkgconfig && g++ "libdlgmod/general/libdlgmod.cpp" "libdlgmod/xlib/libdlgmod.cpp" "libdlgmod/xlib/apiprocess/process.cpp" "libdlgmod/xlib/xprocess.cpp" "libdlgmod/xlib/lodepng.cpp" -o "libdlgmod.so" -DPROCESS_GUIWINDOW_IMPL -DNULLIFY_STDERR -I. -std=c++17 -shared -static-libgcc `pkg-config --cflags --libs x11` -lkvm -lc -lpthread -fPIC;
+  export PKG_CONFIG_PATH=/usr/lib/64/pkgconfig && g++ "libdlgmod/general/libdlgmod.cpp" "libdlgmod/xlib/libdlgmod.cpp" "libdlgmod/xlib/apiprocess/process.cpp" "libdlgmod/xlib/xprocess.cpp" "libdlgmod/xlib/lodepng.cpp" -o "libdlgmod.so" -DPROCESS_GUIWINDOW_IMPL -DNULLIFY_STDERR -I. -std=c++17 -shared -static-libgcc `pkg-config --cflags --libs x11` `pkg-config --cflags --libs tcl --static` -lproc -lkvm -lc -lpthread -fPIC;
 fi
