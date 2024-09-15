@@ -619,7 +619,8 @@ namespace dialog_module {
 
       // Create evaluation string
       string Evaluation = "InputBox(\"" + strPrompt + "\", \"" + strTitle + "\", \"" + strDefault + "\", " + XPos + ", " + YPos + ")";
-      Evaluation = string_replace_all(Evaluation, "\r\n", "\" + vbNewLine + \"");
+      Evaluation = string_replace_all(Evaluation, "\r", "");
+	  Evaluation = string_replace_all(Evaluation, "\n", "\" + vbNewLine + \"");
       wstring WideEval = widen(Evaluation);
 
       #ifdef _MSC_VER
