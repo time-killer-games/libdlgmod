@@ -288,7 +288,7 @@ namespace dialog_module {
       return false;
     }
 
-    #ifndef _MSC_VER
+    #ifdef _MSC_VER
     LRESULT CALLBACK InputBoxProc(int nCode, WPARAM wParam, LPARAM lParam) {
       if (nCode < HC_ACTION)
         return CallNextHookEx(hhook, nCode, wParam, lParam);
@@ -315,12 +315,6 @@ namespace dialog_module {
 
       if (dlg != nullptr) {
         if (nCode == HCBT_ACTIVATE && init == true) {
-          RECT wrect; GetWindowRect(dlg, &wrect);
-          unsigned width = wrect.right - wrect.left;
-          unsigned height = wrect.bottom - wrect.top;
-          int xpos = wrect.left - (width / 2);
-          int ypos = wrect.top - (height / 2);
-          MoveWindow(dlg, xpos, ypos, width, height, true);
           if (hidden == true)
             SendDlgItemMessageW(dlg, 1000, EM_SETPASSWORDCHAR, L'\x25cf', 0);
           init = false;
@@ -611,14 +605,8 @@ namespace dialog_module {
       string strTitle = string_replace_all(Title, "\"", "\"\"");
       string strDefault = string_replace_all(Default, "\"", "\"\"");
 
-      // Dialog position
-      RECT wrect; GetWindowRect(parent_window, &wrect);
-      RECT crect; GetWindowRect(parent_window, &crect);
-      string XPos = to_string(((wrect.left + crect.right) / 2) * 15);
-      string YPos = to_string(((wrect.top + crect.bottom) / 2) * 15);
-
       // Create evaluation string
-      string Evaluation = "InputBox(\"" + strPrompt + "\", \"" + strTitle + "\", \"" + strDefault + "\", " + XPos + ", " + YPos + ")";
+      string Evaluation = "InputBox(\"" + strPrompt + "\", \"" + strTitle + "\", \"" + strDefault + "\")";
       Evaluation = string_replace_all(Evaluation, "\r", "");
       Evaluation = string_replace_all(Evaluation, "\n", "\" + vbNewLine + \"");
       wstring WideEval = widen(Evaluation);
@@ -663,12 +651,6 @@ namespace dialog_module {
           } else {
             cancel_pressed = false;
           }
-          RECT wrect; GetWindowRect(dlg, &wrect);
-          unsigned width = wrect.right - wrect.left;
-          unsigned height = wrect.bottom - wrect.top;
-          int xpos = wrect.left - (width / 2);
-          int ypos = wrect.top - (height / 2);
-          MoveWindow(dlg, xpos, ypos, width, height, true);
           if (hidden == true) {
             SendDlgItemMessageW(dlg, 1000, EM_SETPASSWORDCHAR, L'\x25cf', 0);
             SendDlgItemMessageW(dlg, 1000, WM_LBUTTONDOWN, 0, 0);
