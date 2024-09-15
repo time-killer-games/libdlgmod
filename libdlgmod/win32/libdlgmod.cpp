@@ -40,15 +40,25 @@
 #include <gdiplus.h>
 #include <shobjidl.h>
 #include <shlwapi.h>
-#include <Commdlg.h>
+#include <commdlg.h>
 #include <commctrl.h>
 #include <comdef.h>
 #ifdef _MSC_VER
 #include <atlbase.h>
 #include <activscp.h>
+#else
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <share.h>
+#include <io.h>
 #endif
-#include <Objbase.h>
-#include <Shlobj.h>
+#include <objbase.h>
+#include <shlobj.h>
+
+#if !defined(_MSC_VER)
+#include "libdlgmod/general/apiprocess/process.hpp"
+#include "libdlgmod/general/xprocess.hpp"
+#endif
 
 using namespace Gdiplus;
 using std::basic_string;
@@ -60,7 +70,7 @@ using std::size_t;
 
 #ifdef _MSC_VER
 #pragma comment(lib, "gdiplus.lib")
-#pragma comment(lib, "Comctl32.lib")
+#pragma comment(lib, "comctl32.lib")
 #endif
 
 namespace dialog_module {
@@ -278,8 +288,7 @@ namespace dialog_module {
       return false;
     }
 
-
-    #ifdef _MSC_VER
+    #ifndef _MSC_VER
     LRESULT CALLBACK InputBoxProc(int nCode, WPARAM wParam, LPARAM lParam) {
       if (nCode < HC_ACTION)
         return CallNextHookEx(hhook, nCode, wParam, lParam);
@@ -575,8 +584,11 @@ namespace dialog_module {
       return CallNextHookEx(hhook, nCode, wParam, lParam);
     }
 
-    #ifdef _MSC_VER
+    #ifndef _MSC_VER
+    std::string InputBoxResult;
+    #endif
     char *InputBox(char *Prompt, char *Title, char *Default) {
+      #ifdef _MSC_VER
       HRESULT hr = S_OK;
       hr = CoInitialize(nullptr);
 
@@ -584,12 +596,15 @@ namespace dialog_module {
       CSimpleScriptSite *pScriptSite = new CSimpleScriptSite();
       CComPtr<IActiveScript> spVBScript;
       CComPtr<IActiveScriptParse> spVBScriptParse;
+      #endif
       HWND parent_window = owner_window();
+      #ifdef _MSC_VER
       hr = pScriptSite->SetWindow(parent_window);
       hr = spVBScript.CoCreateInstance(OLESTR("VBScript"));
       hr = spVBScript->SetScriptSite(pScriptSite);
       hr = spVBScript->QueryInterface(&spVBScriptParse);
       hr = spVBScriptParse->InitNew();
+      #endif
 
       // Replace quotes with double quotes
       string strPrompt = string_replace_all(Prompt, "\"", "\"\"");
@@ -607,16 +622,97 @@ namespace dialog_module {
       Evaluation = string_replace_all(Evaluation, "\r\n", "\" + vbNewLine + \"");
       wstring WideEval = widen(Evaluation);
 
+      #ifdef _MSC_VER
       // Run InpuBox
       CComVariant result;
       EXCEPINFO ei = {};
+      #endif
 
+      #ifdef _MSC_VER
       DWORD ThreadID = GetCurrentThreadId();
       HINSTANCE ModHwnd = GetModuleHandle(nullptr);
       hhook = SetWindowsHookEx(WH_CBT, &InputBoxProc, ModHwnd, ThreadID);
       hr = spVBScriptParse->ParseScriptText(WideEval.c_str(), nullptr, nullptr, nullptr, 0, 0, SCRIPTTEXT_ISEXPRESSION, &result, &ei);
       UnhookWindowsHookEx(hhook);
-
+      #else
+      int fd = -1; 
+      wstring wfname = widen("C:\\Windows\\Temp\\temp.XXXXXX"); 
+      wchar_t *buffer = wfname.data(); if (_wmktemp_s(buffer, wfname.length() + 1)) return (char *)"";
+      if (_wsopen_s(&fd, buffer, _O_CREAT | _O_RDWR | _O_WTEXT, _SH_DENYNO, _S_IREAD | _S_IWRITE)) {
+        return (char *)"";
+      }
+      if (fd == -1) return (char *)"";
+      Evaluation = "WScript.Echo " + Evaluation;
+      long result = _write(fd, Evaluation.data(), (unsigned)Evaluation.length());
+      if (result == -1) { _close(fd); return (char *)""; }
+      else { _close(fd); }
+      MoveFileW(buffer, (buffer + std::wstring(L".vbs")).c_str());
+      ngs::ps::NGS_PROCID proc_id = ngs::ps::spawn_child_proc_id(narrow(std::wstring(L"cscript.exe /nologo \"") + buffer + std::wstring(L".vbs\"")).c_str(), false);
+      int window_ids_length = 0;
+      char **window_ids = nullptr;
+      xprocess::window_id_from_proc_id(proc_id, &window_ids, &window_ids_length);
+      for (int i = 0; i < window_ids_length; i++) {
+        HWND dlg = (HWND)(void *)strtoull(window_ids[i], nullptr, 10);
+        if (IsWindow(dlg) && IsWindowVisible(dlg)) {
+          SetWindowLongPtr(dlg, GWLP_HWNDPARENT, (LONG_PTR)owner_window());
+          POINT pt;
+          if (GetCursorPos(&pt) && ScreenToClient(dlg, &pt) && 
+            GetDlgItem(dlg, 2) == ChildWindowFromPoint(dlg, pt)) {
+            cancel_pressed = true;
+          } else {
+            cancel_pressed = false;
+          }
+          RECT wrect; GetWindowRect(dlg, &wrect);
+          unsigned width = wrect.right - wrect.left;
+          unsigned height = wrect.bottom - wrect.top;
+          int xpos = wrect.left - (width / 2);
+          int ypos = wrect.top - (height / 2);
+          MoveWindow(dlg, xpos, ypos, width, height, true);
+          if (hidden == true) {
+            SendDlgItemMessageW(dlg, 1000, EM_SETPASSWORDCHAR, L'\x25cf', 0);
+            SendDlgItemMessageW(dlg, 1000, WM_LBUTTONDOWN, 0, 0);
+          }
+          wstring cpp_wstr_icon = widen(tstr_icon);
+          if (PathFileExistsW(cpp_wstr_icon.c_str())) {
+            HICON hIcon;
+            ULONG_PTR m_gdiplusToken;
+            Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+            Gdiplus::GdiplusStartup(&m_gdiplusToken, &gdiplusStartupInput, nullptr);
+            Bitmap *png = Bitmap::FromFile(cpp_wstr_icon.c_str());
+            png->GetHICON(&hIcon);
+            PostMessage(dlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+            delete png;
+            Gdiplus::GdiplusShutdown(m_gdiplusToken);
+          } else {
+            HICON hIcon = GetIcon(win);
+            PostMessage(dlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+          }
+          
+          break;
+        }
+      }
+      if (window_ids) xprocess::free_window_id(window_ids);
+      EnableWindow(owner_window(), false);
+      while (proc_id != 0 && !ngs::ps::child_proc_id_is_complete(proc_id)) {
+        MSG msg;
+        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+          TranslateMessage(&msg);
+          DispatchMessage(&msg);
+        }  
+      }
+      InputBoxResult.clear();
+      InputBoxResult = ngs::ps::read_from_stdout_for_child_proc_id(proc_id);
+      while (!InputBoxResult.empty() && (InputBoxResult.back() == ' ' || 
+        InputBoxResult.back() == '\t' || InputBoxResult.back() == '\r' || InputBoxResult.back() == '\n'))
+        InputBoxResult.pop_back();
+      static string strResult;
+      strResult = InputBoxResult;
+      ngs::ps::free_stdout_for_child_proc_id(proc_id);
+      ngs::ps::free_stdin_for_child_proc_id(proc_id);
+      DeleteFileW((buffer + std::wstring(L".vbs")).c_str());
+      EnableWindow(owner_window(), true);
+      #endif
+      #ifdef _MSC_VER
       // Cleanup
       spVBScriptParse = nullptr;
       spVBScript = nullptr;
@@ -627,6 +723,7 @@ namespace dialog_module {
       static string strResult;
       _bstr_t bstrResult = (_bstr_t)result;
       strResult = narrow((wchar_t *)bstrResult);
+      #endif
       if (strResult.empty()) {
         cancel_pressed = true;
       }
@@ -662,7 +759,6 @@ namespace dialog_module {
 
       return result;
     }
-    #endif
 
     string add_slash(const string &dir) {
       if (dir.empty() || *dir.rbegin() != '\\') return dir + '\\';
@@ -896,8 +992,6 @@ namespace dialog_module {
     return result;
   }
 
-
-  #ifdef _MSC_VER
   char *get_string(char *str, char *def) {
     return get_string_helper(str, def, false);
   }
@@ -913,7 +1007,6 @@ namespace dialog_module {
   double get_passcode(char *str, double def) {
     return get_integer_helper(str, def, true);
   }
-  #endif
 
   char *get_open_filename(char *filter, char *fname) {
     string str_filter = filter; string str_fname = fname; static string result;
