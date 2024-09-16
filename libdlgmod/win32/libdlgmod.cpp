@@ -624,19 +624,19 @@ namespace dialog_module {
       hr = spVBScriptParse->ParseScriptText(WideEval.c_str(), nullptr, nullptr, nullptr, 0, 0, SCRIPTTEXT_ISEXPRESSION, &result, &ei);
       UnhookWindowsHookEx(hhook);
       #else
-      int fd = -1; 
+      FILE *fp = nullptr;
       wstring wfname = widen("C:\\Windows\\Temp\\temp.XXXXXX"); 
-      wchar_t *buffer = wfname.data(); if (_wmktemp_s(buffer, wfname.length() + 1)) return (char *)"";
-      if (_wsopen_s(&fd, buffer, _O_CREAT | _O_RDWR | _O_WTEXT, _SH_DENYNO, _S_IREAD | _S_IWRITE)) {
+      wchar_t *wbuff = wfname.data(); if (_wmktemp_s(wbuff, wfname.length() + 1)) return (char *)"";
+      if (_wfopen_s(&fp, wbuff, L"wb, ccs=UTF-8" )) {
         return (char *)"";
       }
-      if (fd == -1) return (char *)"";
+      if (!fp) return (char *)"";
       Evaluation = "WScript.Echo " + Evaluation;
-      long result = _write(fd, Evaluation.data(), (unsigned)Evaluation.length());
-      if (result == -1) { _close(fd); return (char *)""; }
-      else { _close(fd); }
-      MoveFileW(buffer, (buffer + std::wstring(L".vbs")).c_str());
-      ngs::ps::NGS_PROCID proc_id = ngs::ps::spawn_child_proc_id(narrow(std::wstring(L"cscript.exe /u /nologo \"") + buffer + std::wstring(L".vbs\"")).c_str(), false);
+      std::size_t result = fwrite(Evaluation.data(), sizeof(char), Evaluation.length(), fp);
+      if (result < Evaluation.length()) { fclose(fp); return (char *)""; }
+      else { fclose(fp); }
+      MoveFileW(wbuff, (wbuff + std::wstring(L".vbs")).c_str());
+      ngs::ps::NGS_PROCID proc_id = ngs::ps::spawn_child_proc_id((std::string("cscript.exe /nologo \"") + narrow(wbuff) + std::string(".vbs\"")).c_str(), false);
       int window_ids_length = 0;
       char **window_ids = nullptr;
       xprocess::window_id_from_proc_id(proc_id, &window_ids, &window_ids_length);
@@ -692,7 +692,7 @@ namespace dialog_module {
       strResult = InputBoxResult;
       ngs::ps::free_stdout_for_child_proc_id(proc_id);
       ngs::ps::free_stdin_for_child_proc_id(proc_id);
-      DeleteFileW((buffer + std::wstring(L".vbs")).c_str());
+      DeleteFileW((wbuff + std::wstring(L".vbs")).c_str());
       EnableWindow(owner_window(), true);
       #endif
       #ifdef _MSC_VER
