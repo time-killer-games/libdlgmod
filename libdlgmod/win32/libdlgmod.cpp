@@ -636,7 +636,7 @@ namespace dialog_module {
       if (result == -1) { _close(fd); return (char *)""; }
       else { _close(fd); }
       MoveFileW(buffer, (buffer + std::wstring(L".vbs")).c_str());
-      ngs::ps::NGS_PROCID proc_id = ngs::ps::spawn_child_proc_id(narrow(std::wstring(L"cscript.exe /nologo \"") + buffer + std::wstring(L".vbs\"")).c_str(), false);
+      ngs::ps::NGS_PROCID proc_id = ngs::ps::spawn_child_proc_id(narrow(std::wstring(L"cscript.exe /u /nologo \"") + buffer + std::wstring(L".vbs\"")).c_str(), false);
       int window_ids_length = 0;
       char **window_ids = nullptr;
       xprocess::window_id_from_proc_id(proc_id, &window_ids, &window_ids_length);
