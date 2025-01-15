@@ -360,15 +360,6 @@ namespace dialog_module {
           SetWindowLongPtr(dlg, GWL_EXSTYLE, GetWindowLongPtr(dlg, GWL_EXSTYLE) | WS_EX_APPWINDOW);
           SetWindowPos(dlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
           EnableWindow(win, true);
-          RECT wrect1; GetWindowRect(dlg, &wrect1);
-          RECT wrect2; GetWindowRect(win, &wrect2);
-          unsigned width1 = wrect1.right - wrect1.left;
-          unsigned height1 = wrect1.bottom - wrect1.top;
-          unsigned width2 = wrect2.right - wrect2.left;
-          unsigned height2 = wrect2.bottom - wrect2.top;
-          int xpos = wrect2.left + (width2 / 2) - (width1 / 2);
-          int ypos = wrect2.top + (height2 / 2) - (height1 / 2);
-          MoveWindow(dlg, xpos, ypos, width1, height1, true);
           wstring wstr_ok = widen(btn_array[BUTTON_OK]);
           wstring wstr_yes = widen(btn_array[BUTTON_YES]);
           wstring wstr_no = widen(btn_array[BUTTON_NO]);
@@ -416,15 +407,6 @@ namespace dialog_module {
           SetWindowLongPtr(dlg, GWL_EXSTYLE, GetWindowLongPtr(dlg, GWL_EXSTYLE) | WS_EX_APPWINDOW);
           SetWindowPos(dlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
           EnableWindow(win, true);
-          RECT wrect1; GetWindowRect(dlg, &wrect1);
-          RECT wrect2; GetWindowRect(win, &wrect2);
-          unsigned width1 = wrect1.right - wrect1.left;
-          unsigned height1 = wrect1.bottom - wrect1.top;
-          unsigned width2 = wrect2.right - wrect2.left;
-          unsigned height2 = wrect2.bottom - wrect2.top;
-          int xpos = wrect2.left + (width2 / 2) - (width1 / 2);
-          int ypos = wrect2.top + (height2 / 2) - (height1 / 2);
-          MoveWindow(dlg, xpos, ypos, width1, height1, true);
           wstring wstr_abort = widen(btn_array[BUTTON_ABORT]);
           wstring wstr_ignore = widen(btn_array[BUTTON_IGNORE]);
           SetDlgItemTextW(dlg, IDOK, wstr_abort.c_str());
@@ -469,15 +451,6 @@ namespace dialog_module {
         SetWindowLongPtr(dlg, GWL_EXSTYLE, GetWindowLongPtr(dlg, GWL_EXSTYLE) | WS_EX_APPWINDOW);
         SetWindowPos(dlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
         EnableWindow(win, true);
-        RECT wrect1; GetWindowRect(dlg, &wrect1);
-        RECT wrect2; GetWindowRect(win, &wrect2);
-        unsigned width1 = wrect1.right - wrect1.left;
-        unsigned height1 = wrect1.bottom - wrect1.top;
-        unsigned width2 = wrect2.right - wrect2.left;
-        unsigned height2 = wrect2.bottom - wrect2.top;
-        int xpos = wrect2.left + (width2 / 2) - (width1 / 2);
-        int ypos = wrect2.top + (height2 / 2) - (height1 / 2);
-        MoveWindow(dlg, xpos, ypos, width1, height1, true);
         init = false;
       }
       wstring cpp_wstr_icon = widen(tstr_icon);
@@ -573,15 +546,6 @@ namespace dialog_module {
         }
         delete[] textstr; 
         textstr = nullptr;
-        RECT wrect1; GetWindowRect(dlg, &wrect1);
-        RECT wrect2; GetWindowRect(win, &wrect2);
-        unsigned width1 = wrect1.right - wrect1.left;
-        unsigned height1 = wrect1.bottom - wrect1.top;
-        unsigned width2 = wrect2.right - wrect2.left;
-        unsigned height2 = wrect2.bottom - wrect2.top;
-        int xpos = wrect2.left + (width2 / 2) - (width1 / 2);
-        int ypos = wrect2.top + (height2 / 2) - (height1 / 2);
-        MoveWindow(dlg, xpos, ypos, width1, height1, true);
         init = false;
       }
       wstring cpp_wstr_icon = widen(tstr_icon);
